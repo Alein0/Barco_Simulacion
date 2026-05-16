@@ -23,16 +23,18 @@ public class ArduinoSerialReader : MonoBehaviour
     public bool IsConnected { get; private set; }
     public string ConnectedPort { get; private set; }
 
-    // Events
     public System.Action<string> OnConnected;
     public System.Action OnDisconnected;
+    public System.Action OnFire;
+    public System.Action OnAnchorDown;
+    public System.Action OnAnchorUp;
 
     private SerialPort serialPort;
     private Thread readThread;
     private volatile bool running;
     private readonly object dataLock = new object();
+    private readonly Queue<string> commandQueue = new Queue<string>();
 
-    // Reconnect loop
     private float reconnectTimer;
     private bool intentionalDisconnect;
 
@@ -63,6 +65,8 @@ public class ArduinoSerialReader : MonoBehaviour
                 TryAutoConnect();
             }
         }
+
+        ProcessCommands();
     }
 
     public void Connect()
@@ -134,7 +138,6 @@ public class ArduinoSerialReader : MonoBehaviour
 
         Debug.Log($"[Arduino] Scanning {ports.Length} port(s): {string.Join(", ", ports)}");
 
-        // Try each port until one responds with valid data
         foreach (string port in ports)
         {
             if (TryHandshake(port))
@@ -159,7 +162,6 @@ public class ArduinoSerialReader : MonoBehaviour
             };
             probe.Open();
 
-            // Attempt to read up to 3 lines; accept the first valid one
             for (int attempt = 0; attempt < 3; attempt++)
             {
                 try
@@ -171,7 +173,7 @@ public class ArduinoSerialReader : MonoBehaviour
                         return true;
                     }
                 }
-                catch (System.TimeoutException) { /* no data yet, try again */ }
+                catch (System.TimeoutException) { }
             }
         }
         catch (System.Exception e)
@@ -180,7 +182,7 @@ public class ArduinoSerialReader : MonoBehaviour
         }
         finally
         {
-            try { probe?.Close(); } catch { /* ignore */ }
+            try { probe?.Close(); } catch { }
         }
         return false;
     }
@@ -205,18 +207,13 @@ public class ArduinoSerialReader : MonoBehaviour
             }
             catch (System.TimeoutException)
             {
-                // Expected when no data is ready
             }
             catch (System.Exception e)
             {
                 Debug.LogWarning($"[Arduino] Read error on {ConnectedPort}: {e.Message}");
-
-                // Port disappeared (USB unplugged, etc.) — trigger reconnect
                 running = false;
                 IsConnected = false;
 
-                // Fire event from main thread via flag checked in Update
-                // (Unity API not thread-safe; just clear the state here)
                 UnityMainThreadDispatcher.Enqueue(() =>
                 {
                     CleanupSerial();
@@ -232,16 +229,49 @@ public class ArduinoSerialReader : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(line)) return;
 
-        string[] parts = line.Trim().Split(',');
-        if (parts.Length != 2) return;
+        line = line.Trim();
 
-        if (int.TryParse(parts[0], out int speed) &&
+        // Formato numérico: velocidad,timon
+        string[] parts = line.Split(',');
+        if (parts.Length == 2 &&
+            int.TryParse(parts[0], out int speed) &&
             int.TryParse(parts[1], out int steering))
         {
             lock (dataLock)
             {
                 RawSpeed = speed;
                 RawSteering = steering;
+            }
+            return;
+        }
+
+        // Comandos de botones
+        lock (commandQueue)
+        {
+            commandQueue.Enqueue(line);
+        }
+    }
+
+    private void ProcessCommands()
+    {
+        lock (commandQueue)
+        {
+            while (commandQueue.Count > 0)
+            {
+                string cmd = commandQueue.Dequeue();
+
+                if (cmd == "DISPARO")
+                {
+                    OnFire?.Invoke();
+                }
+                else if (cmd == "ANCLA_BAJA")
+                {
+                    OnAnchorDown?.Invoke();
+                }
+                else if (cmd == "ANCLA_SUBE")
+                {
+                    OnAnchorUp?.Invoke();
+                }
             }
         }
     }
@@ -265,7 +295,7 @@ public class ArduinoSerialReader : MonoBehaviour
     private void CleanupSerial()
     {
         try { if (serialPort != null && serialPort.IsOpen) serialPort.Close(); }
-        catch { /* ignore errors during cleanup */ }
+        catch { }
         serialPort = null;
     }
 
