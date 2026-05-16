@@ -2,48 +2,138 @@ using UnityEngine;
 
 public class CarController : MonoBehaviour
 {
-    [Header("Movement Settings")]
-    [SerializeField] private float maxSpeed = 10f;
-    [SerializeField] private float maxSteeringAngle = 90f;
-    [SerializeField] private float inputSmoothing = 5f;
-
-    [Header("Calibration")]
-    [SerializeField, Range(0f, 0.3f)] private float deadZone = 0.05f;
-    [SerializeField] private bool invertSpeed = false;
+    [Header("Input Range")]
+    [SerializeField] private int potMin = 0;
+    [SerializeField] private int potMax = 124;
     [SerializeField] private bool invertSteering = false;
+    [SerializeField] private bool invertSpeed = false;
 
-    private float currentSpeed;
-    private float currentSteering;
+    [Header("Boat Steering")]
+    [SerializeField] private float steeringSmoothing = 10f;
 
-    public float CurrentSpeed => currentSpeed;
+    [Header("Sail Animation (no AnimatorController needed)")]
+    [SerializeField] private GameObject sailTarget;
+    [SerializeField] private AnimationClip sailClip;
 
-    void Update()
+    [Header("Anchor Animation (no AnimatorController needed)")]
+    [SerializeField] private GameObject anchorTarget;
+    [SerializeField] private AnimationClip anchorClip;
+    [SerializeField] private float anchorTransitionTime = 0.8f;
+
+    [Header("Optional Forward Motion")]
+    [SerializeField] private bool moveForward = false;
+    [SerializeField] private float maxForwardSpeed = 3f;
+
+    public float CurrentSteering01 { get; private set; }
+    public float CurrentSpeed01 { get; private set; }
+    public bool IsAnchorDown => anchorProgress > 0.5f;
+
+    private ArduinoSerialReader reader;
+    private bool eventsBound;
+
+    private float currentHeading;
+    private float anchorProgress;   // 0 = arriba, 1 = abajo
+    private float anchorTargetState; // 0 = subir, 1 = bajar
+
+    private void Update()
     {
-        var reader = ArduinoSerialReader.Instance;
-        if (reader == null || !reader.IsConnected) return;
+        if (reader == null)
+            reader = ArduinoSerialReader.Instance;
 
-        reader.GetNormalizedValues(out float rawSpeed, out float rawSteering);
+        if (reader == null || !reader.IsConnected)
+            return;
 
-        if (invertSpeed) rawSpeed = -rawSpeed;
-        if (invertSteering) rawSteering = -rawSteering;
+        if (!eventsBound)
+            BindEvents();
 
-        float targetSpeed = ApplyDeadZone(rawSpeed) * maxSpeed;
-        float targetSteering = ApplyDeadZone(rawSteering) * maxSteeringAngle;
+        float steering01 = NormalizePot(reader.RawSteering);
+        float speed01 = NormalizePot(reader.RawSpeed);
 
-        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * inputSmoothing);
-        currentSteering = Mathf.Lerp(currentSteering, targetSteering, Time.deltaTime * inputSmoothing);
+        if (invertSteering) steering01 = 1f - steering01;
+        if (invertSpeed) speed01 = 1f - speed01;
 
-        // Steer only when moving
-        float steeringFactor = Mathf.Sign(currentSpeed) * Mathf.Clamp01(Mathf.Abs(currentSpeed) / 2f);
+        CurrentSteering01 = steering01;
+        CurrentSpeed01 = speed01;
 
-        transform.Rotate(0f, currentSteering * steeringFactor * Time.deltaTime, 0f);
-        transform.Translate(Vector3.forward * currentSpeed * Time.deltaTime);
+        // Dirección: 0..124 -> 0..360 grados
+        float targetHeading = steering01 * 360f;
+        currentHeading = Mathf.LerpAngle(
+            currentHeading,
+            targetHeading,
+            Time.deltaTime * steeringSmoothing
+        );
+
+        transform.rotation = Quaternion.Euler(0f, currentHeading, 0f);
+
+        if (moveForward)
+        {
+            float forwardSpeed = speed01 * maxForwardSpeed;
+            transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime, Space.Self);
+        }
+
+        UpdateSailAnimation(speed01);
+        UpdateAnchorAnimation();
     }
 
-    private float ApplyDeadZone(float value)
+    private float NormalizePot(int rawValue)
     {
-        if (Mathf.Abs(value) < deadZone) return 0f;
-        float sign = Mathf.Sign(value);
-        return sign * (Mathf.Abs(value) - deadZone) / (1f - deadZone);
+        if (potMax <= potMin) return 0f;
+
+        rawValue = Mathf.Clamp(rawValue, potMin, potMax);
+        return Mathf.InverseLerp(potMin, potMax, rawValue);
+    }
+
+    private void UpdateSailAnimation(float speed01)
+    {
+        if (sailClip == null || sailTarget == null) return;
+
+        // Máximo potenciómetro = frame 0
+        // Mínimo potenciómetro = frame final
+        float normalizedTime = 1f - speed01;
+        float time = normalizedTime * sailClip.length;
+
+        sailClip.SampleAnimation(sailTarget, time);
+    }
+
+    private void BindEvents()
+    {
+        if (reader == null || eventsBound) return;
+
+        reader.OnAnchorDown += HandleAnchorDown;
+        reader.OnAnchorUp += HandleAnchorUp;
+        eventsBound = true;
+    }
+
+    private void OnDestroy()
+    {
+        if (reader != null && eventsBound)
+        {
+            reader.OnAnchorDown -= HandleAnchorDown;
+            reader.OnAnchorUp -= HandleAnchorUp;
+        }
+    }
+
+    private void HandleAnchorDown()
+    {
+        anchorTargetState = 1f;
+    }
+
+    private void HandleAnchorUp()
+    {
+        anchorTargetState = 0f;
+    }
+
+    private void UpdateAnchorAnimation()
+    {
+        if (anchorClip == null || anchorTarget == null) return;
+
+        anchorProgress = Mathf.MoveTowards(
+            anchorProgress,
+            anchorTargetState,
+            Time.deltaTime / Mathf.Max(0.01f, anchorTransitionTime)
+        );
+
+        float time = anchorProgress * anchorClip.length;
+        anchorClip.SampleAnimation(anchorTarget, time);
     }
 }
