@@ -4,6 +4,7 @@ using UnityEngine;
 /// Controla el barco:
 ///   - Rotacion Y segun potenciometro (0-1023 -> 0-360 grados)
 ///   - Vaivén en el agua (bobbing)
+///   - Se detiene si el ancla toca una piedra en el agua
 ///   - Delega ancla y canon a sus respectivos scripts
 /// Fallback teclado: A/D rotan, espacio dispara, F ancla
 /// </summary>
@@ -29,20 +30,20 @@ public class BarcoController : MonoBehaviour
     private AnclaController _ancla;
     private CanonController _canon;
 
-    private float _targetYaw   = 0f;
-    private float _currentYaw  = 0f;
+    private float _targetYaw = 0f;
+    private float _currentYaw = 0f;
     private float _baseY;
-    private bool  _serialOk    = false;
+    private bool _serialOk = false;
 
     // Para toggle de ancla con teclado
-    private bool  _anclaKeyLast = false;
-    private bool  _anclaKeyOn   = false;
+    private bool _anclaKeyLast = false;
+    private bool _anclaKeyOn = false;
 
     void Start()
     {
-        _ancla  = GetComponent<AnclaController>();
-        _canon  = GetComponent<CanonController>();
-        _baseY  = transform.position.y;
+        _ancla = GetComponent<AnclaController>();
+        _canon = GetComponent<CanonController>();
+        _baseY = transform.position.y;
         _serialOk = serial != null;
     }
 
@@ -51,6 +52,7 @@ public class BarcoController : MonoBehaviour
         HandleInput();
         ApplyRotation();
         ApplyBobbing();
+        CheckAnclaCollision();
     }
 
     // ── Entrada ──────────────────────────────────────────────────────────────
@@ -58,8 +60,16 @@ public class BarcoController : MonoBehaviour
     {
         if (_serialOk && serial.enabled)
         {
-            // Potenciometro -> angulo
-            _targetYaw = Mathf.Lerp(0f, 360f, serial.potValue / 1023f);
+            // Si el ancla está en contacto con piedra, no rotar
+            if (_ancla != null && _ancla.AnclaEnContacto)
+            {
+                _targetYaw = _currentYaw; // Mantener el ángulo actual
+            }
+            else
+            {
+                // Potenciometro -> angulo
+                _targetYaw = Mathf.Lerp(0f, 360f, serial.potValue / 1023f);
+            }
 
             // Ancla
             _ancla.SetAncla(serial.anclaOn);
@@ -71,8 +81,13 @@ public class BarcoController : MonoBehaviour
         {
             // Fallback teclado
             float axis = Input.GetAxis("Horizontal"); // A/D o flechas
-            _targetYaw += axis * keyRotSpeed * Time.deltaTime;
-            _targetYaw  = (_targetYaw % 360f + 360f) % 360f;
+
+            // Si el ancla está en contacto con piedra, ignorar entrada
+            if (_ancla != null && !_ancla.AnclaEnContacto)
+            {
+                _targetYaw += axis * keyRotSpeed * Time.deltaTime;
+                _targetYaw = (_targetYaw % 360f + 360f) % 360f;
+            }
 
             // Ancla con F (toggle)
             bool anclaKey = Input.GetKey(KeyCode.F);
@@ -88,6 +103,19 @@ public class BarcoController : MonoBehaviour
         }
     }
 
+    // ── Verificar si el ancla toca piedra ────────────────────────────────────
+    private void CheckAnclaCollision()
+    {
+        if (_ancla == null) return;
+
+        if (_ancla.AnclaEnContacto && _ancla.EstaAnclado)
+        {
+            // Barco detenido por contacto del ancla
+            _targetYaw = _currentYaw;
+            Debug.Log("[Barco] ¡DETENIDO! El ancla toca piedra.");
+        }
+    }
+
     // ── Rotacion suavizada ───────────────────────────────────────────────────
     private void ApplyRotation()
     {
@@ -95,7 +123,7 @@ public class BarcoController : MonoBehaviour
         transform.rotation = Quaternion.Euler(0f, _currentYaw, 0f);
     }
 
-    // ── Vaivén ───────────────────────────────────────────────────────────────
+    // ── Vaivén ──────────────────────────────────────────────────────────────
     private void ApplyBobbing()
     {
         if (_ancla != null && _ancla.EstaAnclado) return; // sin vaiven con ancla
