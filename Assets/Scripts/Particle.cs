@@ -12,29 +12,49 @@ public class Particle : MonoBehaviour
     [Range(0f, 1f)] public float restitution = 0.8f;
     [Range(0f, 1f)] public float friction = 0.2f;
 
+    [Header("Angular Physics")]
+    [Min(0f)] public float angularDrag = 0.5f;
+
     [Header("Collision")]
     public LayerMask collisionMask;
     [Min(0f)] public float skin = 0.001f;
 
     private Vector3 initialPosition;
+    private Quaternion initialRotation;
+
     private Vector3 position;
     private Vector3 velocity;
     private Vector3 accumulatedForce;
+
+    private Quaternion rotation;
+    private Vector3 angularVelocity;
+    private Vector3 accumulatedTorque;
+
     private float mass;
     private float radius;
+    private float inertia;
 
-    private void OnEnable() { ParticleWorld.Register(this); }
-    private void OnDisable() { ParticleWorld.Unregister(this); }
+    private void OnEnable()
+    {
+        ParticleWorld.Register(this);
+    }
+
+    private void OnDisable()
+    {
+        ParticleWorld.Unregister(this);
+    }
 
     private void OnValidate()
     {
         ComputeMass();
         ComputeRadius();
+        ComputeInertia();
     }
 
     private void Awake()
     {
         initialPosition = transform.position;
+        initialRotation = transform.rotation;
     }
 
     private void Start()
@@ -44,11 +64,29 @@ public class Particle : MonoBehaviour
 
     public void Integrate(float dt)
     {
+        // Linear
         Vector3 dragForce = -dragCoefficient * velocity;
         Vector3 acceleration = gravity + (accumulatedForce + dragForce) / mass;
 
         velocity += acceleration * dt;
+
+        // Angular
+        Vector3 angularAcceleration = accumulatedTorque / inertia;
+        angularVelocity += angularAcceleration * dt;
+        angularVelocity *= Mathf.Clamp01(1f - angularDrag * dt);
+
+        // Update rotation from angular velocity
+        if (angularVelocity.sqrMagnitude > 0.000001f)
+        {
+            Quaternion deltaRotation =
+                Quaternion.Euler(angularVelocity * Mathf.Rad2Deg * dt);
+
+            rotation = deltaRotation * rotation;
+        }
+
+        // Clear accumulators
         accumulatedForce = Vector3.zero;
+        accumulatedTorque = Vector3.zero;
     }
 
     public void Move(float dt)
@@ -56,15 +94,21 @@ public class Particle : MonoBehaviour
         Vector3 displacement = velocity * dt;
         float distance = displacement.magnitude;
 
-        if (distance <= Mathf.Epsilon) return;
+        if (distance <= Mathf.Epsilon)
+            return;
 
         Vector3 direction = displacement / distance;
         Vector3 castOrigin = position - direction * skin;
         float castDist = distance + skin;
 
-        if (Physics.SphereCast(castOrigin, radius, direction,
-                               out RaycastHit hit, castDist, collisionMask,
-                               QueryTriggerInteraction.Ignore))
+        if (Physics.SphereCast(
+            castOrigin,
+            radius,
+            direction,
+            out RaycastHit hit,
+            castDist,
+            collisionMask,
+            QueryTriggerInteraction.Ignore))
         {
             float travel = Mathf.Max(0f, hit.distance - skin);
             position += direction * travel;
@@ -81,18 +125,26 @@ public class Particle : MonoBehaviour
     public void UpdateVisuals()
     {
         transform.position = position;
+        transform.rotation = rotation;
     }
 
     public void ResetParticle()
     {
         ComputeMass();
         ComputeRadius();
+        ComputeInertia();
 
         position = initialPosition;
         velocity = initialVelocity;
+
+        rotation = initialRotation;
+        angularVelocity = Vector3.zero;
+
         accumulatedForce = Vector3.zero;
+        accumulatedTorque = Vector3.zero;
 
         transform.position = position;
+        transform.rotation = rotation;
     }
 
     private void ComputeMass()
@@ -109,6 +161,12 @@ public class Particle : MonoBehaviour
         radius = maxScale * 0.5f;
     }
 
+    private void ComputeInertia()
+    {
+        // Aproximación de esfera sólida
+        inertia = Mathf.Max(0.0001f, (2f / 5f) * mass * radius * radius);
+    }
+
     public void ReflectVelocity(Vector3 normal)
     {
         Vector3 vNormal = Vector3.Dot(velocity, normal) * normal;
@@ -116,8 +174,34 @@ public class Particle : MonoBehaviour
         velocity = vTangent * (1f - friction) - vNormal * restitution;
     }
 
-    public void AddForce(Vector3 force) => accumulatedForce += force;
-    public void AddImpulse(Vector3 impulse) => velocity += impulse / mass;
+    public void AddForce(Vector3 force)
+    {
+        accumulatedForce += force;
+    }
+
+    public void AddForceAtPoint(Vector3 force, Vector3 worldPoint)
+    {
+        accumulatedForce += force;
+
+        Vector3 r = worldPoint - position;
+        accumulatedTorque += Vector3.Cross(r, force);
+    }
+
+    public void AddTorque(Vector3 torque)
+    {
+        accumulatedTorque += torque;
+    }
+
+    public void AddImpulse(Vector3 impulse)
+    {
+        velocity += impulse / mass;
+    }
+
+    public Vector3 GetPointVelocity(Vector3 worldPoint)
+    {
+        Vector3 r = worldPoint - position;
+        return velocity + Vector3.Cross(angularVelocity, r);
+    }
 
     public Vector3 Position
     {
@@ -133,6 +217,22 @@ public class Particle : MonoBehaviour
     {
         get => velocity;
         set => velocity = value;
+    }
+
+    public Quaternion Rotation
+    {
+        get => rotation;
+        set
+        {
+            rotation = value;
+            transform.rotation = value;
+        }
+    }
+
+    public Vector3 AngularVelocity
+    {
+        get => angularVelocity;
+        set => angularVelocity = value;
     }
 
     public float Mass => mass;
