@@ -1,6 +1,6 @@
 // Pines de los potenciómetros
-const int PIN_VELOCIDAD = A0;
-const int PIN_TIMON = A1;
+const int PIN_VELOCIDAD = A5;
+const int PIN_TIMON = A4;
 
 // Pines de botones
 const int PIN_DISPARO = 2;

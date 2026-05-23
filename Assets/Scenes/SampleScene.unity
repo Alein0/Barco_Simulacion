@@ -358,9 +358,9 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &596517053 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4400613898301719547, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+--- !u!4 &596517055 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -2233866108666500508, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
   m_PrefabInstance: {fileID: 1568851403}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &696435309
@@ -865,6 +865,11 @@ RectTransform:
   m_AnchoredPosition: {x: 16, y: -159}
   m_SizeDelta: {x: 512, y: 50}
   m_Pivot: {x: 0, y: 0.5}
+--- !u!4 &1100449911 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -2484921068739079471, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+  m_PrefabInstance: {fileID: 1568851403}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1171831285
 GameObject:
   m_ObjectHideFlags: 0
@@ -982,141 +987,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
   m_PrefabInstance: {fileID: 1568851403}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1194673385
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1194673384}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 75c97d8a08ab784488bbb9b56b548ce2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BarcoController
-  serial: {fileID: 0}
-  rotSmoothing: 5
-  bobbingAmplitude: 0.08
-  bobbingFrequency: 0.8
-  keyRotSpeed: 90
---- !u!114 &1194673386
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1194673384}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 699e2c0ff03a1884d859f62b6e1f3dfb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CanonController
-  canonTransform: {fileID: 0}
-  smokeParticles: {fileID: 0}
-  canonballPrefab: {fileID: 0}
-  canonballForce: 20
-  canonballLife: 4
-  recoilDistance: 0.15
-  recoilDuration: 0.12
-  canonSound: {fileID: 0}
-  cooldown: 1.5
---- !u!82 &1194673387
-AudioSource:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1194673384}
-  m_Enabled: 1
-  serializedVersion: 4
-  OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 0}
-  m_PlayOnAwake: 1
-  m_Volume: 1
-  m_Pitch: 1
-  Loop: 0
-  Mute: 0
-  Spatialize: 0
-  SpatializePostEffects: 0
-  Priority: 128
-  DopplerLevel: 1
-  MinDistance: 1
-  MaxDistance: 500
-  Pan2D: 0
-  rolloffMode: 0
-  BypassEffects: 0
-  BypassListenerEffects: 0
-  BypassReverbZones: 0
-  rolloffCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 1
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  panLevelCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  spreadCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  reverbZoneMixCustomCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
 --- !u!114 &1194673388
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1152,12 +1022,29 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarController
   potMin: 0
-  potMax: 124
+  potMax: 1024
   invertSteering: 0
   invertSpeed: 0
   steeringSmoothing: 10
-  sailTarget: {fileID: 596517053}
+  steeringTargets:
+  - target: {fileID: 1100449911}
+    minZ: 0
+    maxZ: 360
+    useLocalRotation: 0
+  - target: {fileID: 596517055}
+    minZ: 0
+    maxZ: 360
+    useLocalRotation: 0
+  - target: {fileID: 1100449911}
+    minZ: 0
+    maxZ: 360
+    useLocalRotation: 0
+  sailTarget: {fileID: 1194673384}
   sailClip: {fileID: -1624984294024613664, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+  sailInputMin: 0
+  sailInputMax: 600
+  sailClipStartNormalized: 0
+  sailClipEndNormalized: 1
   anchorTarget: {fileID: 1861070344}
   anchorClip: {fileID: 4543301682193074550, guid: 84f5bdb8e11627447bf51fce985af75e, type: 3}
   anchorTransitionTime: 0.8
@@ -1632,6 +1519,10 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: -7399636041167471225, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+      propertyPath: m_Name
+      value: Timon
+      objectReference: {fileID: 0}
     - target: {fileID: -7335600722112008137, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -1676,6 +1567,10 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 75f2a20ddd6520f4691ca1877ba73878, type: 2}
+    - target: {fileID: -5822795879795684100, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+      propertyPath: m_Name
+      value: Body
+      objectReference: {fileID: 0}
     - target: {fileID: -4990423501052782404, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -1688,9 +1583,33 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: fd290837325e86e4c9fc5e1969c35d9a, type: 2}
+    - target: {fileID: -2484921068739079471, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -90
+      objectReference: {fileID: 0}
+    - target: {fileID: -2484921068739079471, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 576.073
+      objectReference: {fileID: 0}
+    - target: {fileID: -2233866108666500508, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -90
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
       propertyPath: m_Name
       value: Barco - copia
+      objectReference: {fileID: 0}
+    - target: {fileID: 3384537112250134288, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+      propertyPath: m_Name
+      value: Mastil_superios
+      objectReference: {fileID: 0}
+    - target: {fileID: 4400613898301719547, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+      propertyPath: m_Name
+      value: Vela
+      objectReference: {fileID: 0}
+    - target: {fileID: 5947672267955729245, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: -90
       objectReference: {fileID: 0}
     - target: {fileID: 8153101253863224186, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
       propertyPath: m_DirtyAABB
@@ -1720,6 +1639,10 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[1]'
       value: 
       objectReference: {fileID: 2100000, guid: 7f93ff333edff4648a220475b343d57d, type: 2}
+    - target: {fileID: 8513859187771203891, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
+      propertyPath: m_Name
+      value: Mastil_inferior
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects:
@@ -1739,15 +1662,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1194673388}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1194673387}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1194673386}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1194673385}
   m_SourcePrefab: {fileID: 100100000, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
 --- !u!1 &1579184240
 GameObject:
@@ -2678,18 +2592,22 @@ PrefabInstance:
     - target: {fileID: 8012908574517889443, guid: 6e934767fb554c744acdcd546aab7ac8, type: 3}
       propertyPath: target
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 1194673392}
     - target: {fileID: 8012908574517889443, guid: 6e934767fb554c744acdcd546aab7ac8, type: 3}
       propertyPath: offset.x
-      value: 3.87
+      value: 50
       objectReference: {fileID: 0}
     - target: {fileID: 8012908574517889443, guid: 6e934767fb554c744acdcd546aab7ac8, type: 3}
       propertyPath: offset.y
-      value: 13.9
+      value: 70
       objectReference: {fileID: 0}
     - target: {fileID: 8012908574517889443, guid: 6e934767fb554c744acdcd546aab7ac8, type: 3}
       propertyPath: offset.z
-      value: 3.26
+      value: 57
+      objectReference: {fileID: 0}
+    - target: {fileID: 8012908574517889443, guid: 6e934767fb554c744acdcd546aab7ac8, type: 3}
+      propertyPath: positionSmoothing
+      value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
