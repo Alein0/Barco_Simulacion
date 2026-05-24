@@ -2,23 +2,58 @@ using UnityEngine;
 
 public class CarController : MonoBehaviour
 {
-    [Header("Input Range")]
-    [SerializeField] private int potMin = 0;
-    [SerializeField] private int potMax = 124;
+    [Header("Objects To Rotate")]
+    [SerializeField] private Transform[] objectsToRotate;
+
+    [Header("Steering Input Range")]
+    [SerializeField] private int steeringPotMin = 0;
+    [SerializeField] private int steeringPotMax = 124;
+
+    [Header("Sail Input Range")]
+    [SerializeField] private int sailPotMin = 0;
+    [SerializeField] private int sailPotMax = 124;
+
+    [Header("Invert Options")]
     [SerializeField] private bool invertSteering = false;
     [SerializeField] private bool invertSpeed = false;
 
     [Header("Boat Steering")]
     [SerializeField] private float steeringSmoothing = 10f;
 
-    [Header("Sail Animation (no AnimatorController needed)")]
+    // =========================
+    // GUARDAR ROTACION ORIGINAL
+    // =========================
+
+    private Vector3[] originalRotations;
+
+    // =========================
+    // SAIL ANIMATION 1
+    // =========================
+
+    [Header("Sail Animation 1")]
     [SerializeField] private GameObject sailTarget;
     [SerializeField] private AnimationClip sailClip;
 
-    [Header("Anchor Animation (no AnimatorController needed)")]
+    // =========================
+    // SAIL ANIMATION 2
+    // =========================
+
+    [Header("Sail Animation 2")]
+    [SerializeField] private GameObject sailTarget2;
+    [SerializeField] private AnimationClip sailClip2;
+
+    // =========================
+    // ANCHOR
+    // =========================
+
+    [Header("Anchor Animation")]
     [SerializeField] private GameObject anchorTarget;
     [SerializeField] private AnimationClip anchorClip;
     [SerializeField] private float anchorTransitionTime = 0.8f;
+
+    // =========================
+    // MOVEMENT
+    // =========================
 
     [Header("Optional Forward Motion")]
     [SerializeField] private bool moveForward = false;
@@ -26,14 +61,33 @@ public class CarController : MonoBehaviour
 
     public float CurrentSteering01 { get; private set; }
     public float CurrentSpeed01 { get; private set; }
+
     public bool IsAnchorDown => anchorProgress > 0.5f;
 
     private ArduinoSerialReader reader;
     private bool eventsBound;
 
     private float currentHeading;
-    private float anchorProgress;   // 0 = arriba, 1 = abajo
-    private float anchorTargetState; // 0 = subir, 1 = bajar
+    private float anchorProgress;
+    private float anchorTargetState;
+
+    // =========================
+    // START
+    // =========================
+
+    private void Start()
+    {
+        originalRotations = new Vector3[objectsToRotate.Length];
+
+        for (int i = 0; i < objectsToRotate.Length; i++)
+        {
+            if (objectsToRotate[i] != null)
+            {
+                originalRotations[i] =
+                    objectsToRotate[i].localEulerAngles;
+            }
+        }
+    }
 
     private void Update()
     {
@@ -46,61 +100,142 @@ public class CarController : MonoBehaviour
         if (!eventsBound)
             BindEvents();
 
-        float steering01 = NormalizePot(reader.RawSteering);
-        float speed01 = NormalizePot(reader.RawSpeed);
+        // =========================
+        // INPUTS
+        // =========================
 
-        if (invertSteering) steering01 = 1f - steering01;
-        if (invertSpeed) speed01 = 1f - speed01;
+        float steering01 = NormalizePot(
+            reader.RawSteering,
+            steeringPotMin,
+            steeringPotMax
+        );
+
+        float speed01 = NormalizePot(
+            reader.RawSpeed,
+            sailPotMin,
+            sailPotMax
+        );
+
+        if (invertSteering)
+            steering01 = 1f - steering01;
+
+        if (invertSpeed)
+            speed01 = 1f - speed01;
 
         CurrentSteering01 = steering01;
         CurrentSpeed01 = speed01;
 
-        // Dirección: 0..124 -> 0..360 grados
+        // =========================
+        // ROTATION
+        // =========================
+
         float targetHeading = steering01 * 360f;
+
         currentHeading = Mathf.LerpAngle(
             currentHeading,
             targetHeading,
             Time.deltaTime * steeringSmoothing
         );
 
-        transform.rotation = Quaternion.Euler(0f, currentHeading, 0f);
+        for (int i = 0; i < objectsToRotate.Length; i++)
+        {
+            Transform obj = objectsToRotate[i];
+
+            if (obj != null)
+            {
+                Vector3 baseRot = originalRotations[i];
+
+                obj.localRotation = Quaternion.Euler(
+                    baseRot.x,
+                    baseRot.y,
+                    baseRot.z + currentHeading
+                );
+            }
+        }
+
+        // =========================
+        // OPTIONAL MOVEMENT
+        // =========================
 
         if (moveForward)
         {
             float forwardSpeed = speed01 * maxForwardSpeed;
-            transform.Translate(Vector3.forward * forwardSpeed * Time.deltaTime, Space.Self);
+
+            foreach (Transform obj in objectsToRotate)
+            {
+                if (obj != null)
+                {
+                    obj.Translate(
+                        Vector3.forward * forwardSpeed * Time.deltaTime,
+                        Space.Self
+                    );
+                }
+            }
         }
+
+        // =========================
+        // ANIMATIONS
+        // =========================
 
         UpdateSailAnimation(speed01);
         UpdateAnchorAnimation();
     }
 
-    private float NormalizePot(int rawValue)
-    {
-        if (potMax <= potMin) return 0f;
+    // =========================
+    // NORMALIZE POTENTIOMETER
+    // =========================
 
-        rawValue = Mathf.Clamp(rawValue, potMin, potMax);
-        return Mathf.InverseLerp(potMin, potMax, rawValue);
+    private float NormalizePot(int rawValue, int min, int max)
+    {
+        if (max <= min)
+            return 0f;
+
+        rawValue = Mathf.Clamp(rawValue, min, max);
+
+        return Mathf.InverseLerp(min, max, rawValue);
     }
+
+    // =========================
+    // TWO SAIL ANIMATIONS
+    // =========================
 
     private void UpdateSailAnimation(float speed01)
     {
-        if (sailClip == null || sailTarget == null) return;
-
-        // Máximo potenciómetro = frame 0
-        // Mínimo potenciómetro = frame final
         float normalizedTime = 1f - speed01;
-        float time = normalizedTime * sailClip.length;
 
-        sailClip.SampleAnimation(sailTarget, time);
+        if (sailClip != null && sailTarget != null)
+        {
+            float time1 = normalizedTime * sailClip.length;
+
+            sailClip.SampleAnimation(
+                sailTarget,
+                time1
+            );
+        }
+
+        if (sailClip2 != null && sailTarget2 != null)
+        {
+            float time2 = normalizedTime * sailClip2.length;
+
+            sailClip2.SampleAnimation(
+                sailTarget2,
+                time2
+            );
+        }
     }
+
+    // =========================
+    // EVENTS
+    // =========================
 
     private void BindEvents()
     {
-        if (reader == null || eventsBound) return;
+        if (reader == null || eventsBound)
+            return;
 
         reader.OnAnchorDown += HandleAnchorDown;
         reader.OnAnchorUp += HandleAnchorUp;
+
         eventsBound = true;
     }
 
@@ -113,6 +248,10 @@ public class CarController : MonoBehaviour
         }
     }
 
+    // =========================
+    // ANCHOR EVENTS
+    // =========================
+
     private void HandleAnchorDown()
     {
         anchorTargetState = 1f;
@@ -123,9 +262,14 @@ public class CarController : MonoBehaviour
         anchorTargetState = 0f;
     }
 
+    // =========================
+    // ANCHOR ANIMATION
+    // =========================
+
     private void UpdateAnchorAnimation()
     {
-        if (anchorClip == null || anchorTarget == null) return;
+        if (anchorClip == null || anchorTarget == null)
+            return;
 
         anchorProgress = Mathf.MoveTowards(
             anchorProgress,
@@ -134,6 +278,10 @@ public class CarController : MonoBehaviour
         );
 
         float time = anchorProgress * anchorClip.length;
-        anchorClip.SampleAnimation(anchorTarget, time);
+
+        anchorClip.SampleAnimation(
+            anchorTarget,
+            time
+        );
     }
 }
