@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 
 public class CarController : MonoBehaviour
@@ -52,6 +53,15 @@ public class CarController : MonoBehaviour
     [SerializeField] private bool moveForward = false;
 
     [SerializeField] private float maxForwardSpeed = 3f;
+
+    [Header("References")]
+    [SerializeField] private CarController car;
+
+    [SerializeField] private BoatWindMover windMover;
+
+    [SerializeField] private CannonController cannonController;
+
+    [SerializeField] private TMP_Text projectileVelocityText;
 
     public float CurrentSteering01 { get; private set; }
 
@@ -162,6 +172,18 @@ public class CarController : MonoBehaviour
             Time.deltaTime * steeringSmoothing
         );
 
+        // -----------------------------------
+        // VELOCIDAD DEL PROYECTIL
+        // -----------------------------------
+
+        if (
+            cannonController != null &&
+            projectileVelocityText != null
+        )
+        {
+            projectileVelocityText.text =
+                $"Velocidad Disparo: {cannonController.CurrentCharge:F1}";
+        }
         // -----------------------------------
         // OBJETOS QUE ROTAN EN Z
         // -----------------------------------
