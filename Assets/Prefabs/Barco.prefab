@@ -452,11 +452,11 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 8849615923983925488}
+      insertIndex: 0
+      addedObject: {fileID: 6795046108932469333}
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 6795046108932469333}
+      addedObject: {fileID: 8849615923983925488}
     - targetCorrespondingSourceObject: {fileID: -2233866108666500508, guid: 9d121e3dcc7b5814cb80a65d8c57ba5f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 328881165449716644}
@@ -519,6 +519,10 @@ MonoBehaviour:
   anchorTransitionTime: 0.8
   moveForward: 0
   maxForwardSpeed: 3
+  car: {fileID: 0}
+  windMover: {fileID: 0}
+  cannonController: {fileID: 0}
+  projectileVelocityText: {fileID: 0}
 --- !u!114 &6818989534607396043
 MonoBehaviour:
   m_ObjectHideFlags: 0
