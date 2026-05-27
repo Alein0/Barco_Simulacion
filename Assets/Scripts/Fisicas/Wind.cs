@@ -27,6 +27,7 @@ public class Wind : MonoBehaviour, IForceGenerator
 
     private void OnDisable()
     {
+        Debug.LogWarning($"Wind.OnDisable() llamado. StackTrace:\n{System.Environment.StackTrace}");
         ParticleWorld.Unregister((IForceGenerator)this);
     }
 
@@ -39,8 +40,13 @@ public class Wind : MonoBehaviour, IForceGenerator
 
         Vector3 windForceRealist = windForceBase + (windDirection.normalized * realSensation);
 
+        // Validación defensiva para evitar excepciones
+        if (ParticleWorld.All == null || ParticleWorld.All.Count == 0)
+            return;
+
         foreach (Particle p in ParticleWorld.All)
         {
+            if (p == null) continue;
             float distance = Vector3.Distance(transform.position, p.Position);
 
             if (GlobalImpact || distance <= ImpactRange)

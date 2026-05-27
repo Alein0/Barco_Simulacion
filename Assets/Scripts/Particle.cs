@@ -122,6 +122,13 @@ public class Particle : MonoBehaviour
         }
     }
 
+    public void SetSpawnPosition(Vector3 newPosition)
+    {
+        initialPosition = newPosition;
+        position = newPosition;
+        transform.position = newPosition;
+    }
+
     public void UpdateVisuals()
     {
         transform.position = position;

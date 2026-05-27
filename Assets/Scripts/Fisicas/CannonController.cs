@@ -185,33 +185,39 @@ public class CannonController : MonoBehaviour
 
         projectile.SetActive(true);
 
-        Particle particle =
-            projectile.GetComponent<Particle>();
+        Particle particle = projectile.GetComponent<Particle>();
 
         if (particle != null)
         {
-            // Reiniciar física
-            particle.ResetParticle();
+            // Establecer la posición de spawn
+            Vector3 spawnPos = shootPoint.position;
+            particle.SetSpawnPosition(spawnPos);
 
-            // POSICIÓN EXACTA DEL CAÑÓN
-            particle.Position = shootPoint.position;
+            // OBTENER GRAVEDAD DEL PARTICLE
+            Vector3 gravityVector = particle.gravity;
+            float gravityMagnitude = gravityVector.magnitude;
 
-            particle.Rotation = shootPoint.rotation;
-
-            // Dirección exacta del barco
+            // DIRECCIÓN DEL DISPARO (considerando rotación del cañón)
             Vector3 direction = shootPoint.forward.normalized;
 
-            // Velocidad final
-            Vector3 velocity =
-                direction * currentCharge;
+            // CÁLCULO DE VELOCIDAD PARABÓLICA
+            // La velocidad aumenta con la carga (minForce a maxForce)
+            // Mapear currentCharge (5-50) a velocidad (5-50)
+            float velocityMagnitude = Mathf.Lerp(minForce, maxForce,
+                (currentCharge - minForce) / (maxForce - minForce));
 
-            particle.Velocity = velocity;
+            // Aplicar velocidad en la dirección del cañón
+            Vector3 finalVelocity = direction * velocityMagnitude;
+
+            particle.Velocity = finalVelocity;
 
             lastShotForce = currentCharge;
 
-            Debug.Log("SHOT");
+            Debug.Log("SHOT - TIRO PARABÓLICO");
             Debug.Log("FORCE: " + currentCharge);
-            Debug.Log("VELOCITY: " + velocity);
+            Debug.Log("VELOCITY MAGNITUDE: " + velocityMagnitude);
+            Debug.Log("FINAL VELOCITY: " + finalVelocity);
+            Debug.Log("POSITION: " + spawnPos);
         }
 
         currentCharge = minForce;
@@ -234,26 +240,29 @@ public class CannonController : MonoBehaviour
         )
             return;
 
-        Vector3[] points =
-            new Vector3[trajectoryPoints];
+        Vector3[] points = new Vector3[trajectoryPoints];
 
         Vector3 position = shootPoint.position;
 
-        Vector3 velocity =
-            shootPoint.forward.normalized * currentCharge;
+        Vector3 direction = shootPoint.forward.normalized;
+        Vector3 velocity = direction * currentCharge;
+
+        // Obtener la gravedad del primer projectile para simular
+        Particle sampleParticle = projectilePrefab.GetComponent<Particle>();
+        Vector3 gravity = sampleParticle != null ? sampleParticle.gravity : Physics.gravity;
 
         for (int i = 0; i < trajectoryPoints; i++)
         {
             points[i] = position;
 
-            // Física
-            velocity += Physics.gravity * trajectoryTimeStep;
+            // Aplicar gravedad a la velocidad
+            velocity += gravity * trajectoryTimeStep;
 
+            // Actualizar posición
             position += velocity * trajectoryTimeStep;
         }
 
-        trajectoryLine.positionCount =
-            trajectoryPoints;
+        trajectoryLine.positionCount = trajectoryPoints;
 
         trajectoryLine.SetPositions(points);
     }
@@ -291,7 +300,7 @@ public class CannonController : MonoBehaviour
         for (int i = 0; i < poolSize; i++)
         {
             GameObject projectile =
-                Instantiate(projectilePrefab);
+                Instantiate(projectilePrefab, new Vector3(0, -1000, 0), Quaternion.identity);
 
             projectile.SetActive(false);
 

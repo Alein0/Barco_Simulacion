@@ -49,7 +49,7 @@ public class ParticleWorld : MonoBehaviour
 
         // 1. Integración: cada partícula consume fuerzas → velocidad.
         foreach (Particle p in particles) p.Integrate(dt);
-
+        
         // 2. Colisiones contra el mundo.
         foreach (Particle p in particles) p.Move(dt);
 
