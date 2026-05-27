@@ -33,7 +33,12 @@ public class InputManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
@@ -43,28 +48,65 @@ public class InputManager : MonoBehaviour
         controls.Player.Pause.performed += _ => OnPause?.Invoke();
         controls.Player.Restart.performed += _ => OnRestart?.Invoke();
 
+        // SALIR DEL JUEGO CON ESC
+        controls.Player.Pause.performed += _ => ExitGame();
+
         // Mouse
         controls.Player.Grab.started += _ => OnGrabPressed?.Invoke();
         controls.Player.Grab.canceled += _ => OnGrabReleased?.Invoke();
+
         controls.Player.Throw.started += _ => OnThrowPressed?.Invoke();
         controls.Player.Throw.canceled += _ => OnThrowReleased?.Invoke();
 
-        controls.Player.PointerPosition.performed += ctx => PointerPosition = ctx.ReadValue<Vector2>();
+        controls.Player.PointerPosition.performed += ctx =>
+            PointerPosition = ctx.ReadValue<Vector2>();
 
         // Cámara
-        controls.Player.Move.performed += ctx => MoveInput = ctx.ReadValue<Vector2>();
-        controls.Player.Move.canceled += _ => MoveInput = Vector2.zero;
-        controls.Player.Look.performed += ctx => LookDelta = ctx.ReadValue<Vector2>();
-        controls.Player.Look.canceled += _ => LookDelta = Vector2.zero;
-        controls.Player.Ascend.performed += ctx => AscendInput = ctx.ReadValue<float>();
-        controls.Player.Ascend.canceled += _ => AscendInput = 0f;
-        controls.Player.ToggleCursor.performed += _ => OnToggleCursor?.Invoke();
+        controls.Player.Move.performed += ctx =>
+            MoveInput = ctx.ReadValue<Vector2>();
+
+        controls.Player.Move.canceled += _ =>
+            MoveInput = Vector2.zero;
+
+        controls.Player.Look.performed += ctx =>
+            LookDelta = ctx.ReadValue<Vector2>();
+
+        controls.Player.Look.canceled += _ =>
+            LookDelta = Vector2.zero;
+
+        controls.Player.Ascend.performed += ctx =>
+            AscendInput = ctx.ReadValue<float>();
+
+        controls.Player.Ascend.canceled += _ =>
+            AscendInput = 0f;
+
+        controls.Player.ToggleCursor.performed += _ =>
+            OnToggleCursor?.Invoke();
 
         // Edición
-        controls.Player.PinToggle.performed += _ => OnPinToggle?.Invoke();
-        controls.Player.LinkToggle.performed += _ => OnLinkToggle?.Invoke();
+        controls.Player.PinToggle.performed += _ =>
+            OnPinToggle?.Invoke();
+
+        controls.Player.LinkToggle.performed += _ =>
+            OnLinkToggle?.Invoke();
     }
 
-    void OnEnable() { controls.Player.Enable(); }
-    void OnDisable() { controls.Player.Disable(); }
+    void OnEnable()
+    {
+        controls.Player.Enable();
+    }
+
+    void OnDisable()
+    {
+        controls.Player.Disable();
+    }
+
+    void ExitGame()
+    {
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
+    }
 }

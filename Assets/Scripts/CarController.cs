@@ -16,17 +16,14 @@ public class CarController : MonoBehaviour
 
     [Header("Steering Input Range")]
     [SerializeField] private int steeringPotMin = 0;
-
     [SerializeField] private int steeringPotMax = 124;
 
     [Header("Sail Input Range")]
     [SerializeField] private int sailPotMin = 0;
-
     [SerializeField] private int sailPotMax = 600;
 
     [Header("Invert Options")]
     [SerializeField] private bool invertSteering = false;
-
     [SerializeField] private bool invertSpeed = false;
 
     [Header("Boat Steering")]
@@ -34,56 +31,42 @@ public class CarController : MonoBehaviour
 
     [Header("Sail Animation 1")]
     [SerializeField] private GameObject sailTarget;
-
     [SerializeField] private AnimationClip sailClip;
 
     [Header("Sail Animation 2")]
     [SerializeField] private GameObject sailTarget2;
-
     [SerializeField] private AnimationClip sailClip2;
 
     [Header("Anchor Animation")]
     [SerializeField] private GameObject anchorTarget;
-
     [SerializeField] private AnimationClip anchorClip;
-
     [SerializeField] private float anchorTransitionTime = 0.8f;
 
     [Header("Optional Forward Motion")]
     [SerializeField] private bool moveForward = false;
-
     [SerializeField] private float maxForwardSpeed = 3f;
 
     [Header("References")]
-    [SerializeField] private CarController car;
-
-    [SerializeField] private BoatWindMover windMover;
-
     [SerializeField] private CannonController cannonController;
-
     [SerializeField] private TMP_Text projectileVelocityText;
 
     public float CurrentSteering01 { get; private set; }
-
     public float CurrentSpeed01 { get; private set; }
-
     public int CurrentSailRaw { get; private set; }
-
     public float CurrentSailExposure01 { get; private set; }
 
     public bool IsAnchorDown => anchorProgress > 0.5f;
+    public float CurrentHeading => currentHeading;
+    public float AnchorProgress => anchorProgress;
 
     private Vector3[] originalRotationsZ;
     private Vector3[] originalRotationsY;
 
     private ArduinoSerialReader reader;
-
     private bool eventsBound;
 
     private float currentHeading;
-
     private float anchorProgress;
-
     private float anchorTargetState;
 
     private void Start()
@@ -91,32 +74,26 @@ public class CarController : MonoBehaviour
         // -----------------------------------
         // GUARDAR ROTACIONES Z
         // -----------------------------------
-
-        originalRotationsZ =
-            new Vector3[objectsToRotateZ.Length];
+        originalRotationsZ = new Vector3[objectsToRotateZ.Length];
 
         for (int i = 0; i < objectsToRotateZ.Length; i++)
         {
             if (objectsToRotateZ[i] != null)
             {
-                originalRotationsZ[i] =
-                    objectsToRotateZ[i].localEulerAngles;
+                originalRotationsZ[i] = objectsToRotateZ[i].localEulerAngles;
             }
         }
 
         // -----------------------------------
         // GUARDAR ROTACIONES Y
         // -----------------------------------
-
-        originalRotationsY =
-            new Vector3[objectsToRotateY.Length];
+        originalRotationsY = new Vector3[objectsToRotateY.Length];
 
         for (int i = 0; i < objectsToRotateY.Length; i++)
         {
             if (objectsToRotateY[i] != null)
             {
-                originalRotationsY[i] =
-                    objectsToRotateY[i].localEulerAngles;
+                originalRotationsY[i] = objectsToRotateY[i].localEulerAngles;
             }
         }
     }
@@ -157,11 +134,8 @@ public class CarController : MonoBehaviour
             speed01 = 1f - speed01;
 
         CurrentSteering01 = steering01;
-
         CurrentSpeed01 = speed01;
-
         CurrentSailRaw = rawSail;
-
         CurrentSailExposure01 = speed01;
 
         float targetHeading = steering01 * 360f;
@@ -175,27 +149,22 @@ public class CarController : MonoBehaviour
         // -----------------------------------
         // VELOCIDAD DEL PROYECTIL
         // -----------------------------------
-
-        if (
-            cannonController != null &&
-            projectileVelocityText != null
-        )
+        if (cannonController != null && projectileVelocityText != null)
         {
             projectileVelocityText.text =
                 $"Velocidad Disparo: {cannonController.CurrentCharge:F1}";
         }
+
         // -----------------------------------
         // OBJETOS QUE ROTAN EN Z
         // -----------------------------------
-
         for (int i = 0; i < objectsToRotateZ.Length; i++)
         {
             Transform obj = objectsToRotateZ[i];
 
             if (obj != null)
             {
-                Vector3 baseRot =
-                    originalRotationsZ[i];
+                Vector3 baseRot = originalRotationsZ[i];
 
                 obj.localRotation = Quaternion.Euler(
                     baseRot.x,
@@ -208,15 +177,13 @@ public class CarController : MonoBehaviour
         // -----------------------------------
         // OBJETOS QUE ROTAN EN Y
         // -----------------------------------
-
         for (int i = 0; i < objectsToRotateY.Length; i++)
         {
             Transform obj = objectsToRotateY[i];
 
             if (obj != null)
             {
-                Vector3 baseRot =
-                    originalRotationsY[i];
+                Vector3 baseRot = originalRotationsY[i];
 
                 obj.localRotation = Quaternion.Euler(
                     baseRot.x,
@@ -229,20 +196,16 @@ public class CarController : MonoBehaviour
         // -----------------------------------
         // MOVIMIENTO
         // -----------------------------------
-
         if (moveForward)
         {
-            float forwardSpeed =
-                speed01 * maxForwardSpeed;
+            float forwardSpeed = speed01 * maxForwardSpeed;
 
             foreach (Transform obj in objectsToRotateZ)
             {
                 if (obj != null)
                 {
                     obj.Translate(
-                        Vector3.forward *
-                        forwardSpeed *
-                        Time.deltaTime,
+                        Vector3.forward * forwardSpeed * Time.deltaTime,
                         Space.Self
                     );
                 }
@@ -250,59 +213,33 @@ public class CarController : MonoBehaviour
         }
 
         UpdateSailAnimation(speed01);
-
         UpdateAnchorAnimation();
     }
 
-    private float NormalizePot(
-        int rawValue,
-        int min,
-        int max
-    )
+    private float NormalizePot(int rawValue, int min, int max)
     {
         if (max <= min)
             return 0f;
 
-        rawValue = Mathf.Clamp(
-            rawValue,
-            min,
-            max
-        );
+        rawValue = Mathf.Clamp(rawValue, min, max);
 
-        return Mathf.InverseLerp(
-            min,
-            max,
-            rawValue
-        );
+        return Mathf.InverseLerp(min, max, rawValue);
     }
 
     private void UpdateSailAnimation(float speed01)
     {
-        float normalizedTime =
-            1f - speed01;
+        float normalizedTime = 1f - speed01;
 
         if (sailClip != null && sailTarget != null)
         {
-            float time1 =
-                normalizedTime *
-                sailClip.length;
-
-            sailClip.SampleAnimation(
-                sailTarget,
-                time1
-            );
+            float time1 = normalizedTime * sailClip.length;
+            sailClip.SampleAnimation(sailTarget, time1);
         }
 
         if (sailClip2 != null && sailTarget2 != null)
         {
-            float time2 =
-                normalizedTime *
-                sailClip2.length;
-
-            sailClip2.SampleAnimation(
-                sailTarget2,
-                time2
-            );
+            float time2 = normalizedTime * sailClip2.length;
+            sailClip2.SampleAnimation(sailTarget2, time2);
         }
     }
 
@@ -312,7 +249,6 @@ public class CarController : MonoBehaviour
             return;
 
         reader.OnAnchorDown += HandleAnchorDown;
-
         reader.OnAnchorUp += HandleAnchorUp;
 
         eventsBound = true;
@@ -323,7 +259,6 @@ public class CarController : MonoBehaviour
         if (reader != null && eventsBound)
         {
             reader.OnAnchorDown -= HandleAnchorDown;
-
             reader.OnAnchorUp -= HandleAnchorUp;
         }
     }
@@ -346,24 +281,38 @@ public class CarController : MonoBehaviour
         anchorProgress = Mathf.MoveTowards(
             anchorProgress,
             anchorTargetState,
-            Time.deltaTime /
-            Mathf.Max(0.01f, anchorTransitionTime)
+            Time.deltaTime / Mathf.Max(0.01f, anchorTransitionTime)
         );
 
-        float time =
-            anchorProgress *
-            anchorClip.length;
+        float time = anchorProgress * anchorClip.length;
 
-        anchorClip.SampleAnimation(
-            anchorTarget,
-            time
-        );
+        anchorClip.SampleAnimation(anchorTarget, time);
+    }
+
+    // -----------------------------------
+    // MÉTODOS PÚBLICOS PARA BOTONES
+    // -----------------------------------
+    public void RequestAnchorDown()
+    {
+        anchorTargetState = 1f;
+    }
+
+    public void RequestAnchorUp()
+    {
+        anchorTargetState = 0f;
+    }
+
+    public void ToggleAnchorState()
+    {
+        if (IsAnchorDown)
+            RequestAnchorUp();
+        else
+            RequestAnchorDown();
     }
 
     // -----------------------------------
     // FLECHA VERDE
     // -----------------------------------
-
     private void OnDrawGizmosSelected()
     {
         if (frontObject == null)
@@ -371,48 +320,32 @@ public class CarController : MonoBehaviour
 
         Gizmos.color = Color.green;
 
-        Vector3 start =
-            frontObject.position;
+        Vector3 start = frontObject.position;
 
-        Vector3 direction =
-            Vector3.ProjectOnPlane(
-                frontObject.forward,
-                Vector3.up
-            ).normalized;
+        Vector3 direction = Vector3.ProjectOnPlane(
+            frontObject.forward,
+            Vector3.up
+        ).normalized;
 
-        DrawArrow(
-            start,
-            direction,
-            frontArrowLength
-        );
+        DrawArrow(start, direction, frontArrowLength);
     }
 
-    private void DrawArrow(
-        Vector3 start,
-        Vector3 direction,
-        float length
-    )
+    private void DrawArrow(Vector3 start, Vector3 direction, float length)
     {
         if (direction.sqrMagnitude < 0.0001f)
             return;
 
-        Vector3 end =
-            start + direction * length;
+        Vector3 end = start + direction * length;
 
         Gizmos.DrawLine(start, end);
 
-        Quaternion rotation =
-            Quaternion.LookRotation(direction);
+        Quaternion rotation = Quaternion.LookRotation(direction);
 
         Vector3 right =
-            rotation *
-            Quaternion.Euler(0f, 160f, 0f) *
-            Vector3.forward;
+            rotation * Quaternion.Euler(0f, 160f, 0f) * Vector3.forward;
 
         Vector3 left =
-            rotation *
-            Quaternion.Euler(0f, 200f, 0f) *
-            Vector3.forward;
+            rotation * Quaternion.Euler(0f, 200f, 0f) * Vector3.forward;
 
         Gizmos.DrawLine(
             end,

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using TMPro;
 
 public class CannonController : MonoBehaviour
 {
@@ -22,7 +23,7 @@ public class CannonController : MonoBehaviour
     [SerializeField] private float trajectoryTimeStep = 0.05f;
 
     [Header("UI Display")]
-    [SerializeField] private TMPro.TextMeshProUGUI velocityDisplay;
+    [SerializeField] private TextMeshProUGUI velocityDisplay;
 
     private Queue<GameObject> projectilePool;
 
@@ -45,8 +46,6 @@ public class CannonController : MonoBehaviour
         {
             trajectoryLine.enabled = false;
             trajectoryLine.positionCount = trajectoryPoints;
-
-            // IMPORTANTE
             trajectoryLine.useWorldSpace = true;
         }
     }
@@ -70,11 +69,8 @@ public class CannonController : MonoBehaviour
     private void Update()
     {
         HandleKeyboardInput();
-
         HandleArduinoCharge();
-
         UpdateTrajectoryDisplay();
-
         UpdateVelocityDisplay();
     }
 
@@ -113,14 +109,12 @@ public class CannonController : MonoBehaviour
         if (!isCharging)
         {
             StartCharging();
-
             arduinoHolding = true;
         }
         else
         {
             // Segundo toque dispara
             Shoot();
-
             arduinoHolding = false;
         }
     }
@@ -140,7 +134,6 @@ public class CannonController : MonoBehaviour
     private void StartCharging()
     {
         isCharging = true;
-
         currentCharge = minForce;
 
         if (trajectoryLine != null)
@@ -172,7 +165,6 @@ public class CannonController : MonoBehaviour
             return;
 
         isCharging = false;
-
         arduinoHolding = false;
 
         GameObject projectile = GetPooledProjectile();
@@ -187,28 +179,22 @@ public class CannonController : MonoBehaviour
 
         Particle particle = projectile.GetComponent<Particle>();
 
-        if (particle != null)
+        if (particle != null && shootPoint != null)
         {
-            // Establecer la posición de spawn
             Vector3 spawnPos = shootPoint.position;
             particle.SetSpawnPosition(spawnPos);
 
-            // OBTENER GRAVEDAD DEL PARTICLE
-            Vector3 gravityVector = particle.gravity;
-            float gravityMagnitude = gravityVector.magnitude;
-
-            // DIRECCIÓN DEL DISPARO (considerando rotación del cañón)
+            // Dirección del disparo
             Vector3 direction = shootPoint.forward.normalized;
 
-            // CÁLCULO DE VELOCIDAD PARABÓLICA
-            // La velocidad aumenta con la carga (minForce a maxForce)
-            // Mapear currentCharge (5-50) a velocidad (5-50)
-            float velocityMagnitude = Mathf.Lerp(minForce, maxForce,
-                (currentCharge - minForce) / (maxForce - minForce));
+            // Usamos currentCharge como fuerza base
+            float velocityMagnitude = Mathf.Lerp(
+                minForce,
+                maxForce,
+                (currentCharge - minForce) / (maxForce - minForce)
+            );
 
-            // Aplicar velocidad en la dirección del cañón
             Vector3 finalVelocity = direction * velocityMagnitude;
-
             particle.Velocity = finalVelocity;
 
             lastShotForce = currentCharge;
@@ -236,34 +222,34 @@ public class CannonController : MonoBehaviour
     {
         if (
             trajectoryLine == null ||
-            !isCharging
+            !isCharging ||
+            shootPoint == null
         )
             return;
 
         Vector3[] points = new Vector3[trajectoryPoints];
 
         Vector3 position = shootPoint.position;
-
         Vector3 direction = shootPoint.forward.normalized;
         Vector3 velocity = direction * currentCharge;
 
-        // Obtener la gravedad del primer projectile para simular
-        Particle sampleParticle = projectilePrefab.GetComponent<Particle>();
-        Vector3 gravity = sampleParticle != null ? sampleParticle.gravity : Physics.gravity;
+        Particle sampleParticle = projectilePrefab != null
+            ? projectilePrefab.GetComponent<Particle>()
+            : null;
+
+        Vector3 gravity = sampleParticle != null
+            ? sampleParticle.gravity
+            : Physics.gravity;
 
         for (int i = 0; i < trajectoryPoints; i++)
         {
             points[i] = position;
 
-            // Aplicar gravedad a la velocidad
             velocity += gravity * trajectoryTimeStep;
-
-            // Actualizar posición
             position += velocity * trajectoryTimeStep;
         }
 
         trajectoryLine.positionCount = trajectoryPoints;
-
         trajectoryLine.SetPositions(points);
     }
 
@@ -278,13 +264,11 @@ public class CannonController : MonoBehaviour
 
         if (isCharging)
         {
-            velocityDisplay.text =
-                $"Potencia: {currentCharge:F1}";
+            velocityDisplay.text = $"Potencia: {currentCharge:F1}";
         }
         else
         {
-            velocityDisplay.text =
-                $"Último Disparo: {lastShotForce:F1}";
+            velocityDisplay.text = $"Último Disparo: {lastShotForce:F1}";
         }
     }
 
@@ -294,19 +278,18 @@ public class CannonController : MonoBehaviour
 
     private void InitializeProjectilePool()
     {
-        projectilePool =
-            new Queue<GameObject>(poolSize);
+        projectilePool = new Queue<GameObject>(poolSize);
 
         for (int i = 0; i < poolSize; i++)
         {
-            GameObject projectile =
-                Instantiate(projectilePrefab, new Vector3(0, -1000, 0), Quaternion.identity);
+            GameObject projectile = Instantiate(
+                projectilePrefab,
+                new Vector3(0, -1000, 0),
+                Quaternion.identity
+            );
 
             projectile.SetActive(false);
-
-            projectile.name =
-                $"Projectile_{i}";
-
+            projectile.name = $"Projectile_{i}";
             projectilePool.Enqueue(projectile);
         }
     }
@@ -321,13 +304,28 @@ public class CannonController : MonoBehaviour
         return null;
     }
 
-    public void ReturnProjectileToPool(
-        GameObject projectile
-    )
+    public void ReturnProjectileToPool(GameObject projectile)
     {
         projectile.SetActive(false);
-
         projectilePool.Enqueue(projectile);
+    }
+
+    // =====================================================
+    // BOTÓN UI
+    // =====================================================
+
+    public void UIFireButton()
+    {
+        if (!isCharging)
+        {
+            StartCharging();
+            arduinoHolding = true;
+        }
+        else
+        {
+            Shoot();
+            arduinoHolding = false;
+        }
     }
 
     // =====================================================
@@ -335,8 +333,6 @@ public class CannonController : MonoBehaviour
     // =====================================================
 
     public float CurrentCharge => currentCharge;
-
     public float LastShotForce => lastShotForce;
-
     public bool IsCharging => isCharging;
 }
