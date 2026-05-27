@@ -107,10 +107,10 @@ MonoBehaviour:
   initialVelocity: {x: 0, y: 0, z: 0}
   gravity: {x: 0, y: -9.81, z: 0}
   dragCoefficient: 0.1
-  massFactor: 200
+  massFactor: 1
   restitution: 0.8
   friction: 0.2
-  angularDrag: 0.3
+  angularDrag: 0.1
   collisionMask:
     serializedVersion: 2
     m_Bits: 0

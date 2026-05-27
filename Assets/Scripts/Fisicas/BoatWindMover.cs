@@ -33,6 +33,10 @@ public class BoatWindMover : MonoBehaviour
 
     private Vector3 currentWindVelocity;
 
+    [SerializeField] private bool anchorActive;
+
+    [SerializeField] private float anchorBrakeSpeed = 3f;
+
     private void Awake()
     {
         if (boatController == null)
@@ -172,10 +176,35 @@ public class BoatWindMover : MonoBehaviour
         );
 
         // -----------------------------------
+        // ANCLA
+        // -----------------------------------
+
+        if (anchorActive)
+        {
+            currentWindVelocity = Vector3.Lerp(
+                currentWindVelocity,
+                Vector3.zero,
+                Time.deltaTime * anchorBrakeSpeed
+            );
+
+            // Frenar completamente
+            if (currentWindVelocity.magnitude < 0.05f)
+            {
+                currentWindVelocity = Vector3.zero;
+            }
+        }
+
+        // -----------------------------------
         // MOVIMIENTO FINAL
         // -----------------------------------
 
         transform.position +=
             currentWindVelocity * Time.deltaTime;
     }
+    public void SetAnchor(bool active)
+    {
+        anchorActive = active;
+    }
+
+    public bool IsAnchorActive => anchorActive;
 }
