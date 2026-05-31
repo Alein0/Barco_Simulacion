@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 
 public class CarController : MonoBehaviour
@@ -11,12 +11,15 @@ public class CarController : MonoBehaviour
 
     [Header("Preview Arrow")]
     [SerializeField] private Transform frontObject;
-
     [SerializeField] private float frontArrowLength = 2f;
 
     [Header("Steering Input Range")]
     [SerializeField] private int steeringPotMin = 0;
-    [SerializeField] private int steeringPotMax = 124;
+    [SerializeField] private int steeringPotMax = 1024;
+
+    [Header("Steering Angle Limits")]
+    [SerializeField] private float minSteeringAngle = 25f;
+    [SerializeField] private float maxSteeringAngle = 335f;
 
     [Header("Sail Input Range")]
     [SerializeField] private int sailPotMin = 0;
@@ -71,30 +74,18 @@ public class CarController : MonoBehaviour
 
     private void Start()
     {
-        // -----------------------------------
-        // GUARDAR ROTACIONES Z
-        // -----------------------------------
         originalRotationsZ = new Vector3[objectsToRotateZ.Length];
-
         for (int i = 0; i < objectsToRotateZ.Length; i++)
         {
             if (objectsToRotateZ[i] != null)
-            {
                 originalRotationsZ[i] = objectsToRotateZ[i].localEulerAngles;
-            }
         }
 
-        // -----------------------------------
-        // GUARDAR ROTACIONES Y
-        // -----------------------------------
         originalRotationsY = new Vector3[objectsToRotateY.Length];
-
         for (int i = 0; i < objectsToRotateY.Length; i++)
         {
             if (objectsToRotateY[i] != null)
-            {
                 originalRotationsY[i] = objectsToRotateY[i].localEulerAngles;
-            }
         }
     }
 
@@ -138,7 +129,12 @@ public class CarController : MonoBehaviour
         CurrentSailRaw = rawSail;
         CurrentSailExposure01 = speed01;
 
-        float targetHeading = steering01 * 360f;
+        // ✅ Ahora el rango del timón es SOLO de 25° a 335°
+        float targetHeading = Mathf.Lerp(
+            minSteeringAngle,
+            maxSteeringAngle,
+            steering01
+        );
 
         currentHeading = Mathf.LerpAngle(
             currentHeading,
@@ -146,18 +142,12 @@ public class CarController : MonoBehaviour
             Time.deltaTime * steeringSmoothing
         );
 
-        // -----------------------------------
-        // VELOCIDAD DEL PROYECTIL
-        // -----------------------------------
         if (cannonController != null && projectileVelocityText != null)
         {
             projectileVelocityText.text =
                 $"Velocidad Disparo: {cannonController.CurrentCharge:F1}";
         }
 
-        // -----------------------------------
-        // OBJETOS QUE ROTAN EN Z
-        // -----------------------------------
         for (int i = 0; i < objectsToRotateZ.Length; i++)
         {
             Transform obj = objectsToRotateZ[i];
@@ -174,9 +164,6 @@ public class CarController : MonoBehaviour
             }
         }
 
-        // -----------------------------------
-        // OBJETOS QUE ROTAN EN Y
-        // -----------------------------------
         for (int i = 0; i < objectsToRotateY.Length; i++)
         {
             Transform obj = objectsToRotateY[i];
@@ -193,9 +180,6 @@ public class CarController : MonoBehaviour
             }
         }
 
-        // -----------------------------------
-        // MOVIMIENTO
-        // -----------------------------------
         if (moveForward)
         {
             float forwardSpeed = speed01 * maxForwardSpeed;
@@ -222,7 +206,6 @@ public class CarController : MonoBehaviour
             return 0f;
 
         rawValue = Mathf.Clamp(rawValue, min, max);
-
         return Mathf.InverseLerp(min, max, rawValue);
     }
 
@@ -285,13 +268,9 @@ public class CarController : MonoBehaviour
         );
 
         float time = anchorProgress * anchorClip.length;
-
         anchorClip.SampleAnimation(anchorTarget, time);
     }
 
-    // -----------------------------------
-    // M�TODOS P�BLICOS PARA BOTONES
-    // -----------------------------------
     public void RequestAnchorDown()
     {
         anchorTargetState = 1f;
@@ -308,53 +287,5 @@ public class CarController : MonoBehaviour
             RequestAnchorUp();
         else
             RequestAnchorDown();
-    }
-
-    // -----------------------------------
-    // FLECHA VERDE
-    // -----------------------------------
-    private void OnDrawGizmosSelected()
-    {
-        if (frontObject == null)
-            return;
-
-        Gizmos.color = Color.green;
-
-        Vector3 start = frontObject.position;
-
-        Vector3 direction = Vector3.ProjectOnPlane(
-            frontObject.forward,
-            Vector3.up
-        ).normalized;
-
-        DrawArrow(start, direction, frontArrowLength);
-    }
-
-    private void DrawArrow(Vector3 start, Vector3 direction, float length)
-    {
-        if (direction.sqrMagnitude < 0.0001f)
-            return;
-
-        Vector3 end = start + direction * length;
-
-        Gizmos.DrawLine(start, end);
-
-        Quaternion rotation = Quaternion.LookRotation(direction);
-
-        Vector3 right =
-            rotation * Quaternion.Euler(0f, 160f, 0f) * Vector3.forward;
-
-        Vector3 left =
-            rotation * Quaternion.Euler(0f, 200f, 0f) * Vector3.forward;
-
-        Gizmos.DrawLine(
-            end,
-            end + right * (length * 0.2f)
-        );
-
-        Gizmos.DrawLine(
-            end,
-            end + left * (length * 0.2f)
-        );
     }
 }
