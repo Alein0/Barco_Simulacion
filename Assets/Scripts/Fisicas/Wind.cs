@@ -12,12 +12,52 @@ public class Wind : MonoBehaviour, IForceGenerator
     public float turbulenceIntensity = 2f;
     public float turbulenceFrequency = 1.5f;
 
+    [Header("Random Wind Direction")]
+    public bool randomDirection = true;
+    public float changeDirectionEvery = 3f;
+    public float directionLerpSpeed = 1f;
+
+    private Vector3 targetWindDirection;
+    private float directionTimer;
+
     public Vector3 CurrentWindDirection
     {
         get
         {
             return windDirection.normalized;
         }
+    }
+
+    private void Start()
+    {
+        targetWindDirection = windDirection.normalized;
+        directionTimer = changeDirectionEvery;
+    }
+
+    private void Update()
+    {
+        if (!randomDirection)
+            return;
+
+        directionTimer -= Time.deltaTime;
+
+        if (directionTimer <= 0f)
+        {
+            directionTimer = changeDirectionEvery;
+
+            // Dirección aleatoria en el plano XZ (horizontal)
+            Vector2 random2D = Random.insideUnitCircle.normalized;
+            targetWindDirection = new Vector3(random2D.x, 0f, random2D.y);
+
+            if (targetWindDirection.sqrMagnitude < 0.0001f)
+                targetWindDirection = Vector3.right;
+        }
+
+        windDirection = Vector3.Slerp(
+            windDirection.normalized,
+            targetWindDirection.normalized,
+            Time.deltaTime * directionLerpSpeed
+        );
     }
 
     private void OnEnable()
@@ -40,13 +80,13 @@ public class Wind : MonoBehaviour, IForceGenerator
 
         Vector3 windForceRealist = windForceBase + (windDirection.normalized * realSensation);
 
-        // Validación defensiva para evitar excepciones
         if (ParticleWorld.All == null || ParticleWorld.All.Count == 0)
             return;
 
         foreach (Particle p in ParticleWorld.All)
         {
             if (p == null) continue;
+
             float distance = Vector3.Distance(transform.position, p.Position);
 
             if (GlobalImpact || distance <= ImpactRange)
