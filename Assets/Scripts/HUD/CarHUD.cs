@@ -112,22 +112,6 @@ public class CarHUD : MonoBehaviour
             }
         }
 
-        // -----------------------------------
-        // CAÑÓN (CannonController)
-        // -----------------------------------
-        if (cannonController != null && cannonText != null)
-        {
-            if (cannonController.IsCharging)
-            {
-                cannonText.text =
-                    $"Cañón: Cargando ({cannonController.CurrentCharge:F1})";
-            }
-            else
-            {
-                cannonText.text =
-                    $"Último disparo: {cannonController.LastShotForce:F1}";
-            }
-        }
 
         // -----------------------------------
         // FÍSICAS DEL BARCO (Particle)

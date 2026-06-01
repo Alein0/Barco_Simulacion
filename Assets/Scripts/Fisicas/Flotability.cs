@@ -74,7 +74,7 @@ public class Flotability : MonoBehaviour, IForceGenerator
             particle.AddForce(buoyantForce);
 
             // DEBUG
-            Debug.Log($"Partícula: {particle.name} | Profundidad: {depth:F2} | Volumen sumergido: {submergedVolume:F4} | Fuerza flotación: {buoyantForce.y:F2} | Masa: {particle.Mass:F2}");
+            //Debug.Log($"Partícula: {particle.name} | Profundidad: {depth:F2} | Volumen sumergido: {submergedVolume:F4} | Fuerza flotación: {buoyantForce.y:F2} | Masa: {particle.Mass:F2}");
 
             // Aplicar fricción del agua: F_drag = -drag * velocidad
             // (La fricción solo actúa dentro del agua, para evitar afectar partículas en aire)

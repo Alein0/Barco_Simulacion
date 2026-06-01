@@ -1,18 +1,24 @@
-using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using UnityEngine;
 
-public class CannonController : MonoBehaviour
+public class CannonController : MonoBehaviour, IForceGenerator
 {
     [Header("Cannon Setup")]
     [SerializeField] private Transform shootPoint;
     [SerializeField] private GameObject projectilePrefab;
-    [SerializeField] private ParticleWorld particleWorld;
 
-    [Header("Shooting Parameters")]
-    [SerializeField] private float minForce = 5f;
-    [SerializeField] private float maxForce = 50f;
+    [Header("Initial Shot Parameters")]
+    [SerializeField] private float minInitialForce = 5f;
+    [SerializeField] private float maxInitialForce = 50f;
     [SerializeField] private float chargeSpeed = 20f;
+
+    [Header("Wind Force Parameters")]
+    [SerializeField] private float minWindForce = 0f;
+    [SerializeField] private float maxWindForce = 100f;
+    [SerializeField] private float windChargeSpeed = 30f;
+    [SerializeField] private Vector3 windDirection = Vector3.forward;
 
     [Header("Projectile Pool")]
     [SerializeField] private int poolSize = 50;
@@ -24,23 +30,22 @@ public class CannonController : MonoBehaviour
 
     [Header("UI Display")]
     [SerializeField] private TextMeshProUGUI velocityDisplay;
+    [SerializeField] private TextMeshProUGUI windForceDisplay;
 
     private Queue<GameObject> projectilePool;
-
     private float currentCharge;
+    private float currentWindForce;
     private bool isCharging;
-
-    // Arduino
+    private Particle currentProjectile;
     private bool arduinoHolding;
-
-    // Último disparo
     private float lastShotForce;
+    private float lastWindForce;
 
     private void Start()
     {
         InitializeProjectilePool();
-
-        currentCharge = minForce;
+        currentCharge = minInitialForce;
+        currentWindForce = minWindForce;
 
         if (trajectoryLine != null)
         {
@@ -48,6 +53,13 @@ public class CannonController : MonoBehaviour
             trajectoryLine.positionCount = trajectoryPoints;
             trajectoryLine.useWorldSpace = true;
         }
+
+        ParticleWorld.Register(this);
+    }
+
+    private void OnDestroy()
+    {
+        ParticleWorld.Unregister(this);
     }
 
     private void OnEnable()
@@ -74,38 +86,39 @@ public class CannonController : MonoBehaviour
         UpdateVelocityDisplay();
     }
 
-    // =====================================================
-    // KEYBOARD
-    // =====================================================
+    // ? Aplicar viento SOLO a la bola actual
+    public void ApplyForces(float dt)
+    {
+        if (currentProjectile == null)
+            return;
+
+        Vector3 windForceVector = windDirection.normalized * currentWindForce;
+        currentProjectile.AddForce(windForceVector);
+
+        Debug.DrawRay(currentProjectile.Position, windForceVector.normalized * 2f, Color.cyan, 0.016f);
+    }
 
     private void HandleKeyboardInput()
     {
-        // EMPEZAR CARGA
         if (Input.GetKeyDown(KeyCode.F))
         {
             StartCharging();
         }
 
-        // MANTENER CARGA
         if (Input.GetKey(KeyCode.F) && isCharging)
         {
             ChargeShot();
+            ChargeWindForce();
         }
 
-        // DISPARAR
         if (Input.GetKeyUp(KeyCode.F) && isCharging)
         {
             Shoot();
         }
     }
 
-    // =====================================================
-    // ARDUINO
-    // =====================================================
-
     private void HandleArduinoPress()
     {
-        // Primer toque inicia carga
         if (!isCharging)
         {
             StartCharging();
@@ -113,7 +126,6 @@ public class CannonController : MonoBehaviour
         }
         else
         {
-            // Segundo toque dispara
             Shoot();
             arduinoHolding = false;
         }
@@ -124,40 +136,36 @@ public class CannonController : MonoBehaviour
         if (arduinoHolding && isCharging)
         {
             ChargeShot();
+            ChargeWindForce();
         }
     }
-
-    // =====================================================
-    // CHARGE
-    // =====================================================
 
     private void StartCharging()
     {
         isCharging = true;
-        currentCharge = minForce;
+        currentCharge = minInitialForce;
+        currentWindForce = minWindForce;
+        currentProjectile = null;
 
         if (trajectoryLine != null)
         {
             trajectoryLine.enabled = true;
         }
 
-        Debug.Log("START CHARGING");
+        Debug.Log("START CHARGING - Mantén F para cargar");
     }
 
     private void ChargeShot()
     {
         currentCharge += chargeSpeed * Time.deltaTime;
-
-        currentCharge = Mathf.Clamp(
-            currentCharge,
-            minForce,
-            maxForce
-        );
+        currentCharge = Mathf.Clamp(currentCharge, minInitialForce, maxInitialForce);
     }
 
-    // =====================================================
-    // SHOOT
-    // =====================================================
+    private void ChargeWindForce()
+    {
+        currentWindForce += windChargeSpeed * Time.deltaTime;
+        currentWindForce = Mathf.Clamp(currentWindForce, minWindForce, maxWindForce);
+    }
 
     private void Shoot()
     {
@@ -168,45 +176,33 @@ public class CannonController : MonoBehaviour
         arduinoHolding = false;
 
         GameObject projectile = GetPooledProjectile();
-
         if (projectile == null)
         {
             Debug.LogWarning("POOL EMPTY");
+            currentProjectile = null;
             return;
         }
 
-        projectile.SetActive(true);
+        // ? GUARDAR valores ANTES de resetearlos
+        float chargeAtShoot = currentCharge;
+        float windAtShoot = currentWindForce;
 
+        projectile.SetActive(true);
         Particle particle = projectile.GetComponent<Particle>();
 
         if (particle != null && shootPoint != null)
         {
-            Vector3 spawnPos = shootPoint.position;
-            particle.SetSpawnPosition(spawnPos);
-
-            // Dirección del disparo
-            Vector3 direction = shootPoint.forward.normalized;
-
-            // Usamos currentCharge como fuerza base
-            float velocityMagnitude = Mathf.Lerp(
-                minForce,
-                maxForce,
-                (currentCharge - minForce) / (maxForce - minForce)
-            );
-
-            Vector3 finalVelocity = direction * velocityMagnitude;
-            particle.Velocity = finalVelocity;
-
-            lastShotForce = currentCharge;
-
-            Debug.Log("SHOT - TIRO PARABÓLICO");
-            Debug.Log("FORCE: " + currentCharge);
-            Debug.Log("VELOCITY MAGNITUDE: " + velocityMagnitude);
-            Debug.Log("FINAL VELOCITY: " + finalVelocity);
-            Debug.Log("POSITION: " + spawnPos);
+            // ? Pasar valores guardados a la corrutina
+            StartCoroutine(SetupAndFireProjectile(particle, chargeAtShoot, windAtShoot));
+        }
+        else
+        {
+            currentProjectile = null;
         }
 
-        currentCharge = minForce;
+        // Resetear después de guardar
+        currentCharge = minInitialForce;
+        currentWindForce = minWindForce;
 
         if (trajectoryLine != null)
         {
@@ -214,37 +210,71 @@ public class CannonController : MonoBehaviour
         }
     }
 
-    // =====================================================
-    // TRAJECTORY
-    // =====================================================
+    // ? Corrutina con parámetros de carga y viento
+    private IEnumerator SetupAndFireProjectile(Particle particle, float chargeAmount, float windAmount)
+    {
+        // Esperar un frame para que Start() termine
+        yield return null;
+
+        Vector3 spawnPos = shootPoint.position;
+
+        // Establecer posición
+        particle.Position = spawnPos;
+
+        // Calcular dirección
+        Vector3 direction = shootPoint.forward.normalized;
+
+        // ? Usar el chargeAmount guardado, NO currentCharge
+        float velocityMagnitude = Mathf.Lerp(
+            minInitialForce,
+            maxInitialForce,
+            (chargeAmount - minInitialForce) / (maxInitialForce - minInitialForce)
+        );
+
+        Vector3 finalVelocity = direction * velocityMagnitude;
+
+        // ? APLICAR VELOCIDAD
+        particle.Velocity = finalVelocity;
+        particle.Rotation = Quaternion.LookRotation(direction);
+
+        // Establecer como proyectil actual para recibir viento
+        currentProjectile = particle;
+
+        // ? Usar el windAmount guardado
+        lastShotForce = chargeAmount;
+        lastWindForce = windAmount;
+
+        Debug.Log($"====== DISPARO ======");
+        Debug.Log($"Velocidad Inicial: {finalVelocity.magnitude:F2} m/s");
+        Debug.Log($"Dirección: {direction}");
+        Debug.Log($"Carga: {chargeAmount:F2}");
+        Debug.Log($"Viento aplicado: {windAmount:F2}N");
+        Debug.Log($"Posición: {spawnPos}");
+        Debug.Log($"====================");
+    }
 
     private void UpdateTrajectoryDisplay()
     {
-        if (
-            trajectoryLine == null ||
-            !isCharging ||
-            shootPoint == null
-        )
+        if (trajectoryLine == null || !isCharging || shootPoint == null)
             return;
 
         Vector3[] points = new Vector3[trajectoryPoints];
-
         Vector3 position = shootPoint.position;
         Vector3 direction = shootPoint.forward.normalized;
-        Vector3 velocity = direction * currentCharge;
 
-        Particle sampleParticle = projectilePrefab != null
-            ? projectilePrefab.GetComponent<Particle>()
-            : null;
+        float velocityMagnitude = Mathf.Lerp(
+            minInitialForce,
+            maxInitialForce,
+            (currentCharge - minInitialForce) / (maxInitialForce - minInitialForce)
+        );
+        Vector3 velocity = direction * velocityMagnitude;
 
-        Vector3 gravity = sampleParticle != null
-            ? sampleParticle.gravity
-            : Physics.gravity;
+        Particle sampleParticle = projectilePrefab?.GetComponent<Particle>();
+        Vector3 gravity = sampleParticle != null ? sampleParticle.gravity : Physics.gravity;
 
         for (int i = 0; i < trajectoryPoints; i++)
         {
             points[i] = position;
-
             velocity += gravity * trajectoryTimeStep;
             position += velocity * trajectoryTimeStep;
         }
@@ -253,28 +283,16 @@ public class CannonController : MonoBehaviour
         trajectoryLine.SetPositions(points);
     }
 
-    // =====================================================
-    // UI
-    // =====================================================
-
     private void UpdateVelocityDisplay()
     {
-        if (velocityDisplay == null)
-            return;
+        if (velocityDisplay != null)
+        {
+            velocityDisplay.text = isCharging
+                ? $"Velocidad de disparo: {currentCharge:F1}"
+                : $"Último disparo: {lastShotForce:F1}";
+        }
 
-        if (isCharging)
-        {
-            velocityDisplay.text = $"Potencia: {currentCharge:F1}";
-        }
-        else
-        {
-            velocityDisplay.text = $"Último Disparo: {lastShotForce:F1}";
-        }
     }
-
-    // =====================================================
-    // POOL
-    // =====================================================
 
     private void InitializeProjectilePool()
     {
@@ -296,23 +314,19 @@ public class CannonController : MonoBehaviour
 
     private GameObject GetPooledProjectile()
     {
-        if (projectilePool.Count > 0)
-        {
-            return projectilePool.Dequeue();
-        }
-
-        return null;
+        return projectilePool.Count > 0 ? projectilePool.Dequeue() : null;
     }
 
     public void ReturnProjectileToPool(GameObject projectile)
     {
         projectile.SetActive(false);
         projectilePool.Enqueue(projectile);
-    }
 
-    // =====================================================
-    // BOTÓN UI
-    // =====================================================
+        if (currentProjectile != null && projectile.GetComponent<Particle>() == currentProjectile)
+        {
+            currentProjectile = null;
+        }
+    }
 
     public void UIFireButton()
     {
@@ -328,11 +342,6 @@ public class CannonController : MonoBehaviour
         }
     }
 
-    // =====================================================
-    // GETTERS
-    // =====================================================
-
     public float CurrentCharge => currentCharge;
-    public float LastShotForce => lastShotForce;
-    public bool IsCharging => isCharging;
+    public float CurrentWindForce => currentWindForce;
 }

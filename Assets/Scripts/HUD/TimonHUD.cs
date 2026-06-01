@@ -124,20 +124,9 @@ public class TimonHUD : MonoBehaviour
                 ? "Ancla: BAJADA"
                 : "Ancla: SUBIENDO";
         }
-
-        if (cannonText != null && cannonController != null)
-        {
-            if (cannonController.IsCharging)
-            {
-                cannonText.text =
-                    $"Cañón: CARGANDO {cannonController.CurrentCharge:F1}";
-            }
-            else
-            {
-                cannonText.text =
-                    $"Último disparo: {cannonController.LastShotForce:F1}";
-            }
-        }
+        
+       
+        
     }
 
     private void SetupButtons()
