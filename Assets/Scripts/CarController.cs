@@ -11,7 +11,6 @@ public class CarController : MonoBehaviour
 
     [Header("Preview Arrow")]
     [SerializeField] private Transform frontObject;
-    [SerializeField] private float frontArrowLength = 2f;
 
     [Header("Steering Input Range")]
     [SerializeField] private int steeringPotMin = 0;

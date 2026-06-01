@@ -26,8 +26,6 @@ public class AnclaController : MonoBehaviour
         if (carController == null)
             carController = GetComponent<CarController>();
 
-        if (carController == null)
-            carController = FindObjectOfType<CarController>();
 
         // Buscar Arduino (puede no estar disponible)
         try
