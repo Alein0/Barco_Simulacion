@@ -32,6 +32,11 @@ public class CarController : MonoBehaviour
     [Header("Boat Steering")]
     [SerializeField] private float steeringSmoothing = 10f;
 
+    [Header("Keyboard Control")]
+    [SerializeField] private bool useKeyboardInput = true;
+    [SerializeField] private float keyboardSteeringSpeed = 1.5f; // A/D
+    [SerializeField] private float keyboardSailSpeed = 1.0f;      // W/S
+
     [Header("Sail Animation 1")]
     [SerializeField] private GameObject sailTarget;
     [SerializeField] private AnimationClip sailClip;
@@ -72,6 +77,10 @@ public class CarController : MonoBehaviour
     private float anchorProgress;
     private float anchorTargetState;
 
+    // Valores simulados por teclado
+    private float keyboardSteering01 = 0.5f;
+    private float keyboardSail01 = 0f;
+
     private void Start()
     {
         originalRotationsZ = new Vector3[objectsToRotateZ.Length];
@@ -87,6 +96,15 @@ public class CarController : MonoBehaviour
             if (objectsToRotateY[i] != null)
                 originalRotationsY[i] = objectsToRotateY[i].localEulerAngles;
         }
+
+        reader = ArduinoSerialReader.Instance;
+
+        // Si ya está conectado el Arduino, arrancamos con sus valores
+        if (reader != null && reader.IsConnected)
+        {
+            keyboardSteering01 = NormalizePot(reader.RawSteering, steeringPotMin, steeringPotMax);
+            keyboardSail01 = NormalizePot(reader.RawSpeed, sailPotMin, sailPotMax);
+        }
     }
 
     private void Update()
@@ -94,29 +112,59 @@ public class CarController : MonoBehaviour
         if (reader == null)
             reader = ArduinoSerialReader.Instance;
 
-        if (reader == null || !reader.IsConnected)
-            return;
-
-        if (!eventsBound)
+        if (reader != null && reader.IsConnected && !eventsBound)
             BindEvents();
 
-        float steering01 = NormalizePot(
-            reader.RawSteering,
-            steeringPotMin,
-            steeringPotMax
-        );
+        float steering01 = keyboardSteering01;
+        float speed01 = keyboardSail01;
 
-        int rawSail = Mathf.Clamp(
-            reader.RawSpeed,
-            sailPotMin,
-            sailPotMax
-        );
+        bool steeringChangedByKeyboard = false;
+        bool sailChangedByKeyboard = false;
 
-        float speed01 = NormalizePot(
-            rawSail,
-            sailPotMin,
-            sailPotMax
-        );
+        // Teclado
+        if (useKeyboardInput)
+        {
+            if (Input.GetKey(KeyCode.A))
+            {
+                keyboardSteering01 -= keyboardSteeringSpeed * Time.deltaTime;
+                steeringChangedByKeyboard = true;
+            }
+
+            if (Input.GetKey(KeyCode.D))
+            {
+                keyboardSteering01 += keyboardSteeringSpeed * Time.deltaTime;
+                steeringChangedByKeyboard = true;
+            }
+
+            if (Input.GetKey(KeyCode.W))
+            {
+                keyboardSail01 += keyboardSailSpeed * Time.deltaTime;
+                sailChangedByKeyboard = true;
+            }
+
+            if (Input.GetKey(KeyCode.S))
+            {
+                keyboardSail01 -= keyboardSailSpeed * Time.deltaTime;
+                sailChangedByKeyboard = true;
+            }
+
+            keyboardSteering01 = Mathf.Clamp01(keyboardSteering01);
+            keyboardSail01 = Mathf.Clamp01(keyboardSail01);
+        }
+
+        // Arduino
+        if (reader != null && reader.IsConnected)
+        {
+            steering01 = NormalizePot(reader.RawSteering, steeringPotMin, steeringPotMax);
+            speed01 = NormalizePot(reader.RawSpeed, sailPotMin, sailPotMax);
+        }
+
+        // Si estás usando teclado en ese momento, el teclado manda
+        if (steeringChangedByKeyboard)
+            steering01 = keyboardSteering01;
+
+        if (sailChangedByKeyboard)
+            speed01 = keyboardSail01;
 
         if (invertSteering)
             steering01 = 1f - steering01;
@@ -126,10 +174,10 @@ public class CarController : MonoBehaviour
 
         CurrentSteering01 = steering01;
         CurrentSpeed01 = speed01;
-        CurrentSailRaw = rawSail;
+        CurrentSailRaw = Mathf.RoundToInt(Mathf.Lerp(sailPotMin, sailPotMax, speed01));
         CurrentSailExposure01 = speed01;
 
-        // ✅ Ahora el rango del timón es SOLO de 25° a 335°
+        // Timón: solo de 25° a 335°
         float targetHeading = Mathf.Lerp(
             minSteeringAngle,
             maxSteeringAngle,

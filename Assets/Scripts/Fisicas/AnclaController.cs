@@ -13,7 +13,6 @@ public class AnclaController : MonoBehaviour
     public float anclaFrictionMultiplier = 0.95f;
 
     private bool _anclaDown = false;
-    private bool _spaceKeyLast = false;
     private float anchorProgress = 0f;
     private float anchorTargetState = 0f;
     private ArduinoSerialReader arduinoReader;
@@ -71,9 +70,7 @@ public class AnclaController : MonoBehaviour
 
     private void HandleKeyboardInput()
     {
-        bool spaceKey = Input.GetKey(KeyCode.Space);
-
-        if (spaceKey && !_spaceKeyLast)
+        if (Input.GetKeyDown(KeyCode.Space))
         {
             Debug.Log("[Ancla] SPACE presionado");
 
@@ -82,8 +79,6 @@ public class AnclaController : MonoBehaviour
 
             Debug.Log($"[Ancla] Estado: {(_anclaDown ? "BAJADA" : "SUBIDA")}, Progress: {anchorProgress}");
         }
-
-        _spaceKeyLast = spaceKey;
     }
 
     private void HandleAnchorDown()
@@ -108,14 +103,12 @@ public class AnclaController : MonoBehaviour
             return;
         }
 
-        // Interpolar el progreso hacia el estado objetivo
         anchorProgress = Mathf.MoveTowards(
             anchorProgress,
             anchorTargetState,
             Time.deltaTime / Mathf.Max(0.01f, anchorTransitionTime)
         );
 
-        // Aplicar la animación
         float time = anchorProgress * anchorClip.length;
         anchorClip.SampleAnimation(anchorTarget, time);
 

@@ -19,7 +19,7 @@ public class BoatWindMover_Modificado : MonoBehaviour
     [SerializeField] private float windForceScale = 25f;
 
     [Header("Rudder (Steering) Force")]
-    [SerializeField] private float rudderForceMax = 80f;     // subido para que se note
+    [SerializeField] private float rudderForceMax = 80f;     
     [SerializeField] private float rudderBySpeed = 1.0f;
     [Range(0f, 0.3f)]
     [SerializeField] private float rudderDeadZone = 0.05f;
@@ -34,10 +34,10 @@ public class BoatWindMover_Modificado : MonoBehaviour
 
     [Header("IMPORTANT: Make Z force TURN the boat")]
     [Tooltip("Esto es CLAVE: mueve el punto del timón a izquierda/derecha para generar torque con una fuerza en Z.")]
-    [SerializeField] private float rudderSideOffsetMax = 1.2f; // prueba 0.5 a 2.5
+    [SerializeField] private float rudderSideOffsetMax = 1.2f;
 
     [Header("Extra Strength On Z")]
-    [SerializeField] private float extraZMultiplier = 5f; // 1 normal, 5 exagerado
+    [SerializeField] private float extraZMultiplier = 5f;
 
     [Header("Debug Draw")]
     [SerializeField] private bool drawForces = true;
@@ -107,8 +107,8 @@ public class BoatWindMover_Modificado : MonoBehaviour
 
     private void ApplyRudderForce()
     {
-        float steer01 = boatController.CurrentSteering01;     // 0..1
-        float steerSigned = (steer01 - 0.5f) * 2f;           // -1..+1
+        float steer01 = boatController.CurrentSteering01;     
+        float steerSigned = (steer01 - 0.5f) * 2f;           
 
         if (Mathf.Abs(steerSigned) < rudderDeadZone)
         {
@@ -123,24 +123,18 @@ public class BoatWindMover_Modificado : MonoBehaviour
         float mag = (Mathf.Abs(steerSigned) - rudderDeadZone) / Mathf.Max(0.0001f, (1f - rudderDeadZone));
         mag = Mathf.Clamp01(mag);
 
-        float steer = sign * mag;  // -1..+1 (ya limpio)
-
-        // ✅ INVERTIR como pediste:
-        // izquierda = +Z, derecha = -Z
+        float steer = sign * mag;
         steer = -steer;
 
         float speed01 = boatController.CurrentSpeed01;
         float speedFactor = Mathf.Lerp(0.2f, 1f, speed01) * rudderBySpeed;
 
-        // Fuerza en Z (mundo)
-        Vector3 axisLocal = localSteeringAxis.normalized; // (0,0,1)
+ 
+        Vector3 axisLocal = localSteeringAxis.normalized; 
         Vector3 forceWorld = transform.TransformDirection(axisLocal) * (steer * rudderForceMax * speedFactor);
 
-        // 🔥 Exagerar Z si quieres que se note mucho
-        forceWorld.z *= extraZMultiplier;
 
-        // ✅ CLAVE PARA QUE GIRE AUN EMPUJANDO EN Z:
-        // mover el punto de aplicación hacia izquierda/derecha en X según el timón
+        forceWorld.z *= extraZMultiplier;
         Vector3 localPoint = rudderLocalOffset + new Vector3(steer * rudderSideOffsetMax, 0f, 0f);
         Vector3 rudderPointWorld = transform.TransformPoint(localPoint);
 
