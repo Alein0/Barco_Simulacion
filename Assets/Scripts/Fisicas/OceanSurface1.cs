@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[RequireComponent(typeof(MeshFilter))]
 public class OceanSurface1 : MonoBehaviour
 {
     [Header("Plano océano")]
@@ -47,25 +48,38 @@ public class OceanSurface1 : MonoBehaviour
     public bool animateMesh = true;
 
     private Mesh mesh;
-
     private Vector3[] baseVertices;
     private Vector3[] vertices;
 
     private OceanPreset activePreset;
+    private OceanState lastAppliedState;
+
+    private void Awake()
+    {
+        if (meshFilter == null)
+            meshFilter = GetComponent<MeshFilter>();
+
+        mesh = meshFilter.mesh;
+        baseVertices = mesh.vertices;
+        vertices = new Vector3[baseVertices.Length];
+    }
 
     private void Start()
     {
-        mesh = meshFilter.mesh;
-
-        baseVertices = mesh.vertices;
-        vertices = new Vector3[baseVertices.Length];
-
         ApplyState(currentState);
+    }
+
+    private void Update()
+    {
+        if (currentState != lastAppliedState)
+        {
+            ApplyState(currentState);
+        }
     }
 
     private void LateUpdate()
     {
-        if (!animateMesh)
+        if (!animateMesh || activePreset == null)
             return;
 
         AnimateOcean();
@@ -74,6 +88,7 @@ public class OceanSurface1 : MonoBehaviour
     public void ApplyState(OceanState state)
     {
         currentState = state;
+        lastAppliedState = state;
 
         switch (state)
         {
@@ -115,7 +130,6 @@ public class OceanSurface1 : MonoBehaviour
     {
         Vector3 localPos = transform.InverseTransformPoint(worldPosition);
 
-        // Límite del océano
         if (Mathf.Abs(localPos.x) > oceanSizeX * 0.5f ||
             Mathf.Abs(localPos.z) > oceanSizeZ * 0.5f)
         {
@@ -131,7 +145,6 @@ public class OceanSurface1 : MonoBehaviour
         for (int i = 0; i < activePreset.waves.Length; i++)
         {
             WaveSettings wave = activePreset.waves[i];
-
             Vector2 dir = wave.direction.normalized;
 
             float wavelength = Mathf.Max(0.001f, wave.wavelength);
@@ -141,15 +154,7 @@ public class OceanSurface1 : MonoBehaviour
             float k = 2f * Mathf.PI / wavelength;
             float c = Mathf.Sqrt(9.8f / k) * speed;
 
-            float f =
-                k *
-                (
-                    Vector2.Dot(
-                        dir,
-                        new Vector2(localPos.x, localPos.z)
-                    )
-                    - c * time
-                );
+            float f = k * (Vector2.Dot(dir, new Vector2(localPos.x, localPos.z)) - c * time);
 
             height += amplitude * Mathf.Sin(f);
         }
@@ -167,17 +172,12 @@ public class OceanSurface1 : MonoBehaviour
         float hU = GetWaveHeight(worldPosition + Vector3.forward * offset);
 
         Vector3 normal = new Vector3(hL - hR, 2f, hD - hU);
-
         return normal.normalized;
     }
 
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.blue;
-
-        Gizmos.DrawWireCube(
-            transform.position,
-            new Vector3(oceanSizeX, 0.1f, oceanSizeZ)
-        );
+        Gizmos.DrawWireCube(transform.position, new Vector3(oceanSizeX, 0.1f, oceanSizeZ));
     }
 }

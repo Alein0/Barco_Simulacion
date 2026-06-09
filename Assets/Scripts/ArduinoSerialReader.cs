@@ -37,6 +37,7 @@ public class ArduinoSerialReader : MonoBehaviour
 
     private float reconnectTimer;
     private bool intentionalDisconnect;
+    private bool noArduinoFallbackActive;
 
     void Awake()
     {
@@ -45,24 +46,33 @@ public class ArduinoSerialReader : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
 
     void Start()
     {
-        if (autoConnectOnStart) Connect();
+        if (autoConnectOnStart)
+            Connect();
+        else
+            ApplyNoArduinoFallback();
     }
 
     void Update()
     {
-        if (!IsConnected && !intentionalDisconnect && autoDetectPort)
+        if (!IsConnected && !intentionalDisconnect)
         {
-            reconnectTimer -= Time.deltaTime;
-            if (reconnectTimer <= 0f)
+            ApplyNoArduinoFallback();
+
+            if (autoDetectPort)
             {
-                reconnectTimer = reconnectInterval;
-                TryAutoConnect();
+                reconnectTimer -= Time.deltaTime;
+                if (reconnectTimer <= 0f)
+                {
+                    reconnectTimer = reconnectInterval;
+                    TryAutoConnect();
+                }
             }
         }
 
@@ -81,7 +91,8 @@ public class ArduinoSerialReader : MonoBehaviour
 
     public void ConnectTo(string port)
     {
-        if (IsConnected) Disconnect(intentional: false);
+        if (IsConnected)
+            Disconnect(intentional: false);
 
         intentionalDisconnect = false;
 
@@ -92,6 +103,7 @@ public class ArduinoSerialReader : MonoBehaviour
                 ReadTimeout = readTimeoutMs,
                 NewLine = "\n"
             };
+
             serialPort.Open();
 
             running = true;
@@ -100,6 +112,7 @@ public class ArduinoSerialReader : MonoBehaviour
 
             IsConnected = true;
             ConnectedPort = port;
+            noArduinoFallbackActive = false;
 
             Debug.Log($"[Arduino] Connected to {port}");
             OnConnected?.Invoke(port);
@@ -109,6 +122,7 @@ public class ArduinoSerialReader : MonoBehaviour
             IsConnected = false;
             Debug.LogWarning($"[Arduino] Could not open {port}: {e.Message}");
             CleanupSerial();
+            ApplyNoArduinoFallback();
         }
     }
 
@@ -123,6 +137,7 @@ public class ArduinoSerialReader : MonoBehaviour
             speed = (RawSpeed - 512) / 512f;
             steering = (RawSteering - 512) / 512f;
         }
+
         speed = Mathf.Clamp(speed, -1f, 1f);
         steering = Mathf.Clamp(steering, -1f, 1f);
     }
@@ -130,9 +145,11 @@ public class ArduinoSerialReader : MonoBehaviour
     private void TryAutoConnect()
     {
         string[] ports = SerialPort.GetPortNames();
+
         if (ports.Length == 0)
         {
             Debug.Log("[Arduino] No serial ports found.");
+            ApplyNoArduinoFallback();
             return;
         }
 
@@ -148,11 +165,13 @@ public class ArduinoSerialReader : MonoBehaviour
         }
 
         Debug.Log("[Arduino] No Arduino found on any port. Will retry...");
+        ApplyNoArduinoFallback();
     }
 
     private bool TryHandshake(string port)
     {
         SerialPort probe = null;
+
         try
         {
             probe = new SerialPort(port, baudRate)
@@ -160,6 +179,7 @@ public class ArduinoSerialReader : MonoBehaviour
                 ReadTimeout = scanTimeoutMs,
                 NewLine = "\n"
             };
+
             probe.Open();
 
             for (int attempt = 0; attempt < 3; attempt++)
@@ -173,7 +193,9 @@ public class ArduinoSerialReader : MonoBehaviour
                         return true;
                     }
                 }
-                catch (System.TimeoutException) { }
+                catch (System.TimeoutException)
+                {
+                }
             }
         }
         catch (System.Exception e)
@@ -184,12 +206,15 @@ public class ArduinoSerialReader : MonoBehaviour
         {
             try { probe?.Close(); } catch { }
         }
+
         return false;
     }
 
     private bool IsValidArduinoLine(string line)
     {
-        if (string.IsNullOrWhiteSpace(line)) return false;
+        if (string.IsNullOrWhiteSpace(line))
+            return false;
+
         string[] parts = line.Trim().Split(',');
         return parts.Length == 2
             && int.TryParse(parts[0], out _)
@@ -218,6 +243,7 @@ public class ArduinoSerialReader : MonoBehaviour
                 {
                     CleanupSerial();
                     ConnectedPort = null;
+                    ApplyNoArduinoFallback();
                     OnDisconnected?.Invoke();
                     Debug.Log("[Arduino] Device disconnected. Will attempt reconnect...");
                 });
@@ -227,7 +253,8 @@ public class ArduinoSerialReader : MonoBehaviour
 
     private void ParseLine(string line)
     {
-        if (string.IsNullOrWhiteSpace(line)) return;
+        if (string.IsNullOrWhiteSpace(line))
+            return;
 
         line = line.Trim();
 
@@ -242,6 +269,7 @@ public class ArduinoSerialReader : MonoBehaviour
                 RawSpeed = speed;
                 RawSteering = steering;
             }
+
             return;
         }
 
@@ -276,6 +304,22 @@ public class ArduinoSerialReader : MonoBehaviour
         }
     }
 
+    private void ApplyNoArduinoFallback()
+    {
+        lock (dataLock)
+        {
+            RawSpeed = 0;
+            RawSteering = 0;
+        }
+
+        if (!noArduinoFallbackActive)
+        {
+            noArduinoFallbackActive = true;
+            OnAnchorUp?.Invoke();
+            Debug.Log("[Arduino] No Arduino connected. Speed and steering set to 0, anchor forced up.");
+        }
+    }
+
     private void Disconnect(bool intentional)
     {
         intentionalDisconnect = intentional;
@@ -288,18 +332,33 @@ public class ArduinoSerialReader : MonoBehaviour
         IsConnected = false;
         ConnectedPort = null;
 
-        OnDisconnected?.Invoke();
+        if (!intentional)
+        {
+            ApplyNoArduinoFallback();
+            OnDisconnected?.Invoke();
+        }
+
         Debug.Log($"[Arduino] Disconnected (intentional: {intentional}).");
     }
 
     private void CleanupSerial()
     {
-        try { if (serialPort != null && serialPort.IsOpen) serialPort.Close(); }
-        catch { }
+        try
+        {
+            if (serialPort != null && serialPort.IsOpen)
+                serialPort.Close();
+        }
+        catch
+        {
+        }
+
         serialPort = null;
     }
 
-    void OnApplicationQuit() => Disconnect(intentional: true);
+    void OnApplicationQuit()
+    {
+        Disconnect(intentional: true);
+    }
 
     void OnDestroy()
     {
