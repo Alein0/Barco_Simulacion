@@ -79,14 +79,14 @@ public class AnclaController : MonoBehaviour
         }
     }
 
-    private void HandleAnchorDown()
+    public void HandleAnchorDown()
     {
         Debug.Log("[Ancla] Arduino - BAJADA");
         _anclaDown = true;
         anchorTargetState = 1f;
     }
 
-    private void HandleAnchorUp()
+    public void HandleAnchorUp()
     {
         Debug.Log("[Ancla] Arduino - SUBIDA");
         _anclaDown = false;

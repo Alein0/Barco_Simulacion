@@ -10,13 +10,13 @@ public class CannonController : MonoBehaviour, IForceGenerator
     [SerializeField] private GameObject projectilePrefab;
 
     [Header("Initial Shot Parameters")]
-    [SerializeField] private float minInitialForce = 5f;
-    [SerializeField] private float maxInitialForce = 50f;
+    [SerializeField] public float minInitialForce = 5f;
+    [SerializeField] public float maxInitialForce = 50f;
     [SerializeField] private float chargeSpeed = 20f;
 
     [Header("Wind Force Parameters")]
-    [SerializeField] private float minWindForce = 0f;
-    [SerializeField] private float maxWindForce = 100f;
+    [SerializeField] public float minWindForce = 0f;
+    [SerializeField] public float maxWindForce = 100f;
     [SerializeField] private float windChargeSpeed = 30f;
     [SerializeField] private Vector3 windDirection = Vector3.forward;
 

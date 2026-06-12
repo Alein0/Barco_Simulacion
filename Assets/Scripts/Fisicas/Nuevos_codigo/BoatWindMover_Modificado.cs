@@ -12,7 +12,7 @@ public class BoatWindMover_Modificado : MonoBehaviour
     [SerializeField] private Particle boatParticle;
 
     [Header("Wind Boost By Sail")]
-    [SerializeField] private float maxWindMultiplier = 2f;
+    [SerializeField] public float maxWindMultiplier = 2f;
     [SerializeField] private float multiplierSmoothSpeed = 2f;
 
     [Header("Wind Force")]

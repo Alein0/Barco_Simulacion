@@ -80,6 +80,11 @@ public class CarController : MonoBehaviour
     private float keyboardSteering01 = 0.5f;
     private float keyboardSail01 = 0f;
 
+    //Gamepad
+    private bool useGamepadInput = false;
+    private float gamepadSteering01 = 0.5f;
+    private float gamepadSail01 = 0.5f;
+
     private void Start()
     {
         originalRotationsZ = new Vector3[objectsToRotateZ.Length];
@@ -116,6 +121,13 @@ public class CarController : MonoBehaviour
 
         float steering01 = keyboardSteering01;
         float speed01 = keyboardSail01;
+
+        //Gamepad
+        if (useGamepadInput)
+        {
+            steering01 = gamepadSteering01;
+            speed01 = gamepadSail01;
+        }
 
         bool steeringChangedByKeyboard = false;
         bool sailChangedByKeyboard = false;
@@ -334,5 +346,18 @@ public class CarController : MonoBehaviour
             RequestAnchorUp();
         else
             RequestAnchorDown();
+    }
+
+    //Gamepad input 
+    public void SetGamepadSteering(float value)
+    {
+        gamepadSteering01 = Mathf.Clamp01(value);
+        useGamepadInput = true;
+    }
+
+    public void SetGamepadSail(float value)
+    {
+        gamepadSail01 = Mathf.Clamp01(value);
+        useGamepadInput = true;
     }
 }
